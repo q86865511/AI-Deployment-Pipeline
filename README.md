@@ -51,24 +51,24 @@
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Web Browser                         │
-│      主界面(3000) | 監控界面(3001)                        │
+│                    Web Browser                          │
+│         主界面(3000) | 監控界面(3001)                    |
 └─────────────────────┬───────────────────────────────────┘
                       │
 ┌─────────────────────┼───────────────────────────────────┐
-│              Frontend Container                        │
-│              React + Ant Design                        │
+│              Frontend Container                         │
+│              React + Ant Design                         │
 └─────────────────────┬───────────────────────────────────┘
                       │ HTTP API
 ┌─────────────────────┼───────────────────────────────────┐
-│              Backend Container                         │
-│              FastAPI + Python                          │
-│          (localhost:8000)                              │
+│              Backend Container                          │
+│              FastAPI + Python                           │
+│          (localhost:8000)                               │
 └─────────────────────┬───────────────────────────────────┘
                       │ HTTP/gRPC
 ┌─────────────────────┼───────────────────────────────────┐
-│           Triton Inference Server                      │
-│              (localhost:8001/8002)                     │
+│           Triton Inference Server                       │
+│              (localhost:8001/8002)                      │
 └─────────────────────┬───────────────────────────────────┘
                       │
            ┌──────────┴──────────┐
@@ -77,19 +77,19 @@
            └─────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│                 監控系統架構                              │
+│                 監控系統架構                             │
 ├─────────────────────┬───────────────────────────────────┤
-│    Grafana (3001)   │    Prometheus (9090)             │
-│    視覺化儀表板        │    指標收集與儲存                    │
+│    Grafana (3001)   │    Prometheus (9090)              │
+│    視覺化儀表板      │    指標收集與儲存                   │
 └─────────────────────┼───────────────────────────────────┘
                       │ 指標查詢
         ┌─────────────┼─────────────┐
         │             │             │
-┌───────▼──┐  ┌──────▼──┐  ┌──────▼──────┐
-│Node      │  │GPU      │  │Triton       │
-│Exporter  │  │Exporter │  │Metrics      │
-│(9100)    │  │(9445)   │  │(8002)       │
-└──────────┘  └─────────┘  └─────────────┘
+   ┌────▼─────┐  ┌────▼────┐  ┌─────▼──────┐
+   │Node      │  │GPU      │  │Triton      │
+   │Exporter  │  │Exporter │  │Metrics     │
+   │(9100)    │  │(9445)   │  │(8002)      │
+   └──────────┘  └─────────┘  └────────────┘
 ```
 
 ## 系統要求
@@ -124,7 +124,7 @@
 
 2. **克隆專案**
    ```cmd
-   git clone <repository-url>
+   git clone <https://github.com/q86865511/AI-Deployment-Pipeline>
    cd Sys
    ```
 
@@ -153,7 +153,7 @@
 
 2. **克隆專案**
    ```bash
-   git clone <repository-url>
+   git clone <https://github.com/q86865511/AI-Deployment-Pipeline>
    cd Sys
    ```
 
@@ -327,18 +327,6 @@
 - Triton 服務器指標（http://localhost:8002/metrics）
 - 自動指標發現與收集
 
-#### 告警系統
-
-**告警規則配置**:
-- 推理服務異常告警
-- 模型性能下降告警
-- 資源使用超標告警
-- 任務失敗率異常告警
-
-**通知渠道**:
-- Email通知
-- Slack/Teams整合
-- Webhook自定義通知
 
 ## 專案結構
 
@@ -508,43 +496,6 @@ curl http://localhost:8001/v2/health/ready
 - 配置模型實例數量
 - 調整輸入數據預處理
 
-## 開發指南
-
-### 開發環境設置
-
-1. 克隆專案並安裝依賴：
-```bash
-git clone <repository-url>
-cd <project-directory>
-
-# 後端開發
-cd backend
-pip install -r requirements.txt
-
-# 前端開發
-cd frontend
-npm install
-```
-
-2. 配置開發環境變數：
-```bash
-export MODEL_REPOSITORY_PATH=/path/to/model_repository
-export TRITON_URL=http://localhost:8001
-export REACT_APP_API_URL=http://localhost:8000
-```
-
-### 擴展開發
-
-**新增模型格式支援**:
-1. 擴展`ModelFormat`枚舉
-2. 實作對應的轉換服務
-3. 更新推理服務邏輯
-
-**新增監控指標**:
-1. 在相應服務中收集指標
-2. 更新API端點返回數據
-3. 在前端添加可視化組件
-
 ## 技術棧
 
 ### 後端技術
@@ -565,9 +516,6 @@ export REACT_APP_API_URL=http://localhost:8000
 - **NVIDIA Triton**: 推理服務器
 - **Docker Compose**: 服務編排
 
-## 授權協議
-
-本專案採用MIT開源協議，詳見[LICENSE](LICENSE)文件。
 
 ## 貢獻指南
 
@@ -582,5 +530,5 @@ export REACT_APP_API_URL=http://localhost:8000
 
 如有任何問題或建議，請通過以下方式聯絡：
 
-- 專案Issues: [GitHub Issues](https://github.com/your-repo/issues)
-- 技術支援: support@your-domain.com 
+- 專案Issues: [GitHub Issues](https://github.com/q86865511/AI-Deployment-Pipeline/issues)
+- 技術支援: q86865511@gmail.com 
