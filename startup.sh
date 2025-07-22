@@ -1,22 +1,9 @@
 #!/bin/bash
 
-echo "YOLO模型自動化轉換與測試系統啟動腳本"
-echo "==================================="
+echo "具自動化模型優化評估和即時推論資源監控之 AI 部署平台啟動腳本"
+echo "========================================================"
 
-# 檢查是否使用 sudo 運行
-if [ "$EUID" -eq 0 ] && [ ! -z "$SUDO_USER" ]; then
-    echo "[警告] 檢測到使用 sudo 運行腳本"
-    echo "[建議] 請將當前用戶添加到 docker 組，然後不使用 sudo 運行："
-    echo "        sudo usermod -aG docker $SUDO_USER"
-    echo "        newgrp docker"
-    echo "        ./startup.sh"
-    echo ""
-    read -p "是否繼續使用 sudo 運行？(y/N): " continue_sudo
-    if [[ ! $continue_sudo =~ ^[Yy]$ ]]; then
-        echo "[信息] 操作已取消"
-        exit 0
-    fi
-fi
+# 移除 sudo 檢查，允許用戶直接使用 sudo 運行
 
 # 檢查是否使用快速啟動模式
 QUICK_START=0
@@ -46,13 +33,7 @@ if ! docker info &> /dev/null; then
     exit 1
 fi
 
-# 檢查當前用戶是否在docker組中
-if ! groups $USER | grep -q '\bdocker\b'; then
-    echo "[警告] 當前用戶不在docker組中，可能需要sudo權限"
-    echo "將用戶添加到docker組: sudo usermod -aG docker $USER"
-    echo "然後重新登錄或執行: newgrp docker"
-    echo ""
-fi
+# 移除 docker 組檢查，用戶可以直接使用 sudo
 
 # 如果不是快速啟動模式，檢查配置文件是否有更新
 if [ "$QUICK_START" = "0" ]; then
@@ -108,11 +89,11 @@ fi
 echo "[信息] 構建並啟動容器..."
 if [ "$QUICK_START" = "1" ]; then
     # 快速啟動模式：只重啟容器，不重建
-    docker-compose up -d backend frontend
+    docker-compose up -d
 else
     # 正常模式：構建並啟動
     docker-compose build backend frontend
-    docker-compose up -d backend frontend
+    docker-compose up -d
 fi
 
 echo "[信息] 系統服務已啟動，請稍候..."
@@ -132,6 +113,7 @@ echo "[信息] 系統已啟動："
 echo "- 前端界面：http://localhost:3000"
 echo "- 後端API：http://localhost:8000"
 echo "- API文檔：http://localhost:8000/docs"
+echo "- 系統監控：http://localhost:3001 (Grafana儀表板，用戶名/密碼: admin/admin)"
 echo ""
 echo "[信息] 查看服務日誌："
 echo "- 查看所有日誌: docker-compose logs -f"

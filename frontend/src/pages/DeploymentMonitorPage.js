@@ -21,7 +21,8 @@ import {
   MemoryIcon,
   DashboardOutlined,
   BarChartOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  LineChartOutlined
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -330,6 +331,14 @@ const DeploymentMonitorPage = () => {
         marginBottom: '24px' 
       }}>
         <Title level={2}>部署平台監控</Title>
+        <Space>
+          <Button
+            type="default"
+            icon={<LineChartOutlined />}
+            onClick={() => window.open('http://localhost:3001', '_blank')}
+          >
+            系統資源監控
+          </Button>
         <Button
           type="primary"
           icon={<ReloadOutlined />}
@@ -338,6 +347,7 @@ const DeploymentMonitorPage = () => {
         >
           {refreshing ? '刷新中...' : '刷新'}
         </Button>
+        </Space>
       </div>
 
       {/* 統計卡片 */}

@@ -478,12 +478,12 @@ class ModelService:
                 if not os.path.exists(plan_path):
                     print(f"警告：找不到對應的.plan文件: {plan_path}")
                     # 如果沒有.plan文件，嘗試創建一個副本
-                try:
-                    import shutil
-                    shutil.copy2(model.path, plan_path)
-                    print(f"為Triton創建.plan文件: {plan_path}")
-                except Exception as e:
-                    print(f"創建.plan文件失敗: {e}")
+                    try:
+                        import shutil
+                        shutil.copy2(model.path, plan_path)
+                        print(f"為Triton創建.plan文件: {plan_path}")
+                    except Exception as e:
+                        print(f"創建.plan文件失敗: {e}")
                         # 如果無法創建.plan文件，則使用.engine文件
                         plan_filename = "model.engine"
             
@@ -563,7 +563,7 @@ instance_group [
             # 從模型名稱中提取batch size信息
             batch_size = 1
             if "_batch" in model.name:
-                        try:
+                try:
                     batch_part = model.name.split("_batch")[1].split("_")[0]
                     batch_size = int(batch_part)
                 except (ValueError, IndexError):

@@ -485,7 +485,7 @@ const ModelPerformanceAnalyzer = () => {
       
       balancedData.push(extremeBalancedPoint);
       
-      // 按距離Y=X線排序 (越小表示越平衡)
+      // 按距離Y=X線排序 (越小表示越權衡)
       balancedData.sort((a, b) => a.distanceToLine - b.distanceToLine);
       return balancedData; // 返回所有符合條件的配置
     } 
@@ -969,7 +969,7 @@ const ModelPerformanceAnalyzer = () => {
       };
     });
     
-    // 排序找出最接近平衡線的點，取前5個
+            // 排序找出最接近權衡線的點，取前5個
     scatterData.sort((a, b) => a.distance - b.distance);
     const closestPoints = scatterData.slice(0, 5);
     
@@ -1027,7 +1027,7 @@ const ModelPerformanceAnalyzer = () => {
               return `${data.name}<br/>
                      標準化加速比: ${data.value[0].toFixed(3)}<br/>
                      標準化準確率下降比: ${data.value[1].toFixed(3)}<br/>
-                     距離平衡線: ${(data.distance || 0).toFixed(4)}<br/>
+                     距離權衡線: ${(data.distance || 0).toFixed(4)}<br/>
                      理論最大加速比: ${data.originalData.speedupRatio.toFixed(4)}<br/>
                      理論最大下降比: ${Math.abs(data.originalData.accuracyDropRatio).toFixed(4)}<br/>
                      <strong>極值參考點 (性能上限)</strong>`;
@@ -1040,7 +1040,7 @@ const ModelPerformanceAnalyzer = () => {
             return `${data.name}<br/>
                    標準化加速比: ${data.value[0].toFixed(3)}<br/>
                    標準化準確率下降比: ${data.value[1].toFixed(3)}<br/>
-                   距離平衡線: ${(data.distance || 0).toFixed(4)}<br/>
+                   距離權衡線: ${(data.distance || 0).toFixed(4)}<br/>
                    原始推論時間: ${data.originalData.avgInferenceTime.toFixed(2)}ms<br/>
                    原始mAP: ${data.originalData.mAP5095.toFixed(4)}<br/>
                    加速比率: ${data.originalData.speedupRatio.toFixed(4)}${rankText}`;
@@ -1108,7 +1108,7 @@ const ModelPerformanceAnalyzer = () => {
             if (data.name === '極值參考點') {
               return 12;  // 從 25 改為 12
             }
-            // 最接近平衡線的前5個點顯示較大
+            // 最接近權衡線的前5個點顯示較大
             const isClosest = closestPoints.some(point => point.name === data.name);
             return isClosest ? 20 : 12;
           },
@@ -1121,12 +1121,12 @@ const ModelPerformanceAnalyzer = () => {
           },
           markLine: {
             data: [
-              // 主要平衡線 y=x (實線)
+              // 主要權衡線 y=x (實線)
               [
                 { coord: [0, 0], symbol: 'none' },
                 { coord: [1, 1], symbol: 'none' }
               ],
-              // 前5個最接近點到平衡線的垂直距離線 (虛線)
+              // 前5個最接近點到權衡線的垂直距離線 (虛線)
               ...closestPoints.map((point, index) => {
                 const x = point.value[0];
                 const y = point.value[1];
@@ -1150,7 +1150,7 @@ const ModelPerformanceAnalyzer = () => {
               })
             ],
             lineStyle: function(params) {
-              // 第一條線（平衡線）為實線，其他為虛線
+              // 第一條線（權衡線）為實線，其他為虛線
               if (params.dataIndex === 0) {
                 return { color: '#666', type: 'solid', width: 2, opacity: 0.8 };
               } else {
@@ -1161,9 +1161,9 @@ const ModelPerformanceAnalyzer = () => {
               show: true, 
               position: 'middle', 
               formatter: function(params) {
-                // 只在平衡線上顯示標籤
+                // 只在權衡線上顯示標籤
                 if (params.dataIndex === 0) {
-                  return '平衡線 (y=x)';
+                  return '權衡線 (y=x)';
                 }
                 return '';
               }
@@ -1177,7 +1177,7 @@ const ModelPerformanceAnalyzer = () => {
               show: true,
               formatter: function(params) {
                 if (params.dataIndex === 0) {
-                  return '平衡線 (y=x)';
+                  return '權衡線 (y=x)';
                 } else {
                   const index = params.dataIndex;
                   const point = closestPoints[index - 1];

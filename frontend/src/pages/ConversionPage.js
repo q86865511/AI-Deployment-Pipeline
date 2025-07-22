@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, Form, Select, Button, Table, Progress, Tag, message, Alert, Tooltip, Input } from 'antd';
 import { SyncOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import axios from 'axios';
@@ -6,6 +7,7 @@ import axios from 'axios';
 const { Option } = Select;
 
 const ConversionPage = () => {
+  const navigate = useNavigate();
   const [models, setModels] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -167,7 +169,7 @@ const ConversionPage = () => {
   const handleSubmit = async (values) => {
     // 檢查系統是否在執行測試
     if (systemState && systemState.is_testing) {
-      message.error('系統當前正在執行自動化測試，請等待測試完成後再創建轉換任務');
+      message.error('系統當前正在執行自動化模型性能評估，請等待評估完成後再創建轉換任務');
       return;
     }
 
@@ -332,11 +334,11 @@ const ConversionPage = () => {
         <>
           <Button 
             type="link" 
-            href={`/conversion/${record.id}`}
+            onClick={() => navigate(`/conversion/${record.id}`)}
             style={{ marginRight: 8 }}
           >
-          詳情
-        </Button>
+            詳情
+          </Button>
           {record.status !== 'processing' && (
             <Button 
               type="link" 
@@ -380,10 +382,10 @@ const ConversionPage = () => {
       {/* 系統狀態警告 - 只在有測試運行時顯示 */}
       {systemState && systemState.is_testing && (
         <Alert
-          message="系統正在執行自動化測試"
+          message="系統正在執行自動化模型性能評估"
           description={
             <div>
-              <p>系統當前正在執行自動化測試任務，以下是當前測試信息：</p>
+              <p>系統當前正在執行自動化模型性能評估，以下是當前評估信息：</p>
               <p>- 當前模型：{systemState.current_model || '準備中'}</p>
               <p>- 當前階段：{systemState.current_step_name || systemState.current_step || '準備中'}</p>
               <p>- 當前批次大小/精度：{systemState.current_batch_size ? 
@@ -502,7 +504,7 @@ const ConversionPage = () => {
             </Button>
             {systemState && systemState.is_testing && (
               <span style={{ marginLeft: 8, color: '#ff4d4f' }}>
-                系統正在執行自動化測試，暫時無法創建轉換任務
+                系統正在執行自動化管線，暫時無法創建轉換任務
               </span>
             )}
           </Form.Item>

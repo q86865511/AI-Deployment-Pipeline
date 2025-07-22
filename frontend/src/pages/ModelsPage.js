@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Table, Button, Upload, Form, Input, Select, Modal, Card, message, Tooltip, Badge, Space, Tag } from 'antd';
 import { 
   UploadOutlined, 
@@ -14,6 +15,7 @@ import axios from 'axios';
 const { Option } = Select;
 
 const ModelsPage = () => {
+  const navigate = useNavigate();
   const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -388,7 +390,7 @@ const ModelsPage = () => {
       key: 'action',
       render: (_, record) => (
         <Space size="small">
-          <Button type="link" size="small" href={`/models/${record.id}`}>
+          <Button type="link" size="small" onClick={() => navigate(`/models/${record.id}`)}>
             詳情
           </Button>
           <Button 

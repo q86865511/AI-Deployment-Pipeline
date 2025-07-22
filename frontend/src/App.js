@@ -16,7 +16,9 @@ import './App.css';
 // 導入頁面組件
 import HomePage from './pages/HomePage';
 import ModelsPage from './pages/ModelsPage';
+import ModelDetailPage from './pages/ModelDetailPage';
 import ConversionPage from './pages/ConversionPage';
+import ConversionDetailPage from './pages/ConversionDetailPage';
 import BenchmarkPage from './pages/BenchmarkPage';
 import PerformanceAnalyzerPage from './pages/PerformanceAnalyzerPage';
 import TestResultsPage from './pages/TestResultsPage';
@@ -91,7 +93,7 @@ function App() {
                 {
                   key: '4',
                   icon: <FundViewOutlined />,
-                  label: <Link to="/benchmark">自動化轉換與測試</Link>,
+                  label: <Link to="/benchmark">自動化管線</Link>,
                 },
                 {
                   key: '5',
@@ -120,7 +122,7 @@ function App() {
               alignItems: 'center'
             }}>
               <Title level={3} style={{ margin: 0 }}>
-                具自動化測試模型優化和即時推論資源監控之AI部署平台
+                具自動化模型優化評估和即時推論資源監控之AI部署平台
               </Title>
             </Header>
             <Content style={{ margin: '24px 16px' }}>
@@ -129,6 +131,8 @@ function App() {
                   <Route path="/" element={<HomePage />} />
                   <Route path="/upload" element={<ConversionPage />} />
                   <Route path="/models" element={<ModelsPage />} />
+                  <Route path="/models/:id" element={<ModelDetailPage />} />
+                  <Route path="/conversion/:id" element={<ConversionDetailPage />} />
                   <Route path="/benchmark" element={<BenchmarkPage />} />
                   <Route path="/performance-analyzer" element={<PerformanceAnalyzerPage />} />
                   <Route path="/performance/:taskId" element={<PerformanceAnalyzerPage />} />
