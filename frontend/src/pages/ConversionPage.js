@@ -337,8 +337,8 @@ const ConversionPage = () => {
             onClick={() => navigate(`/conversion/${record.id}`)}
             style={{ marginRight: 8 }}
           >
-            詳情
-          </Button>
+          詳情
+        </Button>
           {record.status !== 'processing' && (
             <Button 
               type="link" 
