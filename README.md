@@ -410,7 +410,6 @@ Sys/
 ├── docker-compose.yml        # Docker 服務編排
 ├── startup.bat              # Windows 啟動腳本
 ├── startup.sh               # Linux 啟動腳本
-├── stop.sh                  # 停止服務腳本
 └── README.md               # 專案說明文檔
 ```
 
