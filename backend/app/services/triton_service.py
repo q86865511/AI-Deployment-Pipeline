@@ -282,26 +282,52 @@ class TritonService:
                 success_stats = inference_stats.get("success", {})
                 compute_infer_stats = inference_stats.get("compute_infer", {})
                 
-                # 總延遲時間（success統計）
+                # 獲取執行次數（總請求次數）
+                execution_count = model_stat.get("execution_count", 0)
+                
+                # 總延遲時間（success統計） - 計算單張圖的平均延遲
                 if success_stats.get("count", 0) > 0:
                     avg_total_time_ns = success_stats.get("ns", 0) / success_stats.get("count", 1)
                     avg_total_time_ms = avg_total_time_ns / 1_000_000  # 轉換為毫秒
+                    
+                    # 獲取批次大小來計算單張圖的延遲
+                    batch_size = 1  # 預設批次大小
+                    try:
+                        # 從模型名稱解析批次大小
+                        model_info = self._parse_model_name(model_name)
+                        batch_size = int(model_info.get("batch_size", 1))
+                    except (ValueError, TypeError):
+                        batch_size = 1
+                    
+                    # 計算單張圖的平均延遲
+                    avg_total_time_per_image_ms = avg_total_time_ms / batch_size
                 else:
                     avg_total_time_ms = 0
+                    avg_total_time_per_image_ms = 0
                 
-                # 推理延遲時間（compute_infer統計）
+                # 推理延遲時間（compute_infer統計） - 也計算單張圖的延遲
                 if compute_infer_stats.get("count", 0) > 0:
                     avg_infer_time_ns = compute_infer_stats.get("ns", 0) / compute_infer_stats.get("count", 1)
                     avg_infer_time_ms = avg_infer_time_ns / 1_000_000  # 轉換為毫秒
+                    
+                    # 同樣除以批次大小
+                    try:
+                        model_info = self._parse_model_name(model_name)
+                        batch_size = int(model_info.get("batch_size", 1))
+                    except (ValueError, TypeError):
+                        batch_size = 1
+                    
+                    avg_infer_time_per_image_ms = avg_infer_time_ms / batch_size
                 else:
                     avg_infer_time_ms = 0
+                    avg_infer_time_per_image_ms = 0
                 
                 stats_info.update({
                     "inference_count": model_stat.get("inference_count", 0),
-                    "execution_count": model_stat.get("execution_count", 0),
+                    "execution_count": execution_count,  # 總請求次數
                     "last_inference": model_stat.get("last_inference", 0),  # 直接使用，已經是毫秒時間戳
-                    "avg_total_inference_time_ms": round(avg_total_time_ms, 2),  # 總延遲
-                    "avg_infer_time_ms": round(avg_infer_time_ms, 2),  # 純推理延遲
+                    "avg_total_inference_time_ms": round(avg_total_time_per_image_ms, 2),  # 單張圖總延遲
+                    "avg_infer_time_ms": round(avg_infer_time_per_image_ms, 2),  # 單張圖純推理延遲
                     "success_count": success_stats.get("count", 0),
                     "fail_count": inference_stats.get("fail", {}).get("count", 0),
                     "raw_stats": result
@@ -309,10 +335,10 @@ class TritonService:
             else:
                 stats_info.update({
                     "inference_count": 0,
-                    "execution_count": 0,
+                    "execution_count": 0,  # 總請求次數
                     "last_inference": 0,
-                    "avg_total_inference_time_ms": 0,
-                    "avg_infer_time_ms": 0,
+                    "avg_total_inference_time_ms": 0,  # 單張圖總延遲
+                    "avg_infer_time_ms": 0,  # 單張圖純推理延遲
                     "success_count": 0,
                     "fail_count": 0,
                     "raw_stats": result
@@ -420,7 +446,7 @@ class TritonService:
                         "platform": platform,
                         "state": model_state,
                         "version": model_version,
-                        "inference_count": 0,
+                        "execution_count": 0,  # 總請求次數
                         "avg_total_time_ms": 0,
                         "avg_infer_time_ms": 0,
                         "last_inference": None
@@ -429,12 +455,12 @@ class TritonService:
                     # 添加統計信息
                     if stats["success"]:
                         loaded_model_info.update({
-                            "inference_count": stats.get("inference_count", 0),
-                            "avg_total_time_ms": stats.get("avg_total_inference_time_ms", 0),  # 總延遲
-                            "avg_infer_time_ms": stats.get("avg_infer_time_ms", 0),  # 純推理延遲
+                            "execution_count": stats.get("execution_count", 0),  # 總請求次數
+                            "avg_total_time_ms": stats.get("avg_total_inference_time_ms", 0),  # 單張圖總延遲
+                            "avg_infer_time_ms": stats.get("avg_infer_time_ms", 0),  # 單張圖純推理延遲
                             "last_inference": stats.get("last_inference", None)  # 毫秒時間戳，無需轉換
                         })
-                        print(f"模型 {model_name} 統計信息: 推論次數={stats.get('inference_count', 0)}, 總延遲={stats.get('avg_total_inference_time_ms', 0)}ms, 推理延遲={stats.get('avg_infer_time_ms', 0)}ms, 最後推論={stats.get('last_inference', None)}")
+                        print(f"模型 {model_name} 統計信息: 總請求次數={stats.get('execution_count', 0)}, 單張圖總延遲={stats.get('avg_total_inference_time_ms', 0)}ms, 單張圖推理延遲={stats.get('avg_infer_time_ms', 0)}ms, 最後推論={stats.get('last_inference', None)}")
                     else:
                         print(f"模型 {model_name} 統計信息獲取失敗: {stats.get('error', 'Unknown error')}")
                     

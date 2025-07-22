@@ -411,7 +411,7 @@ const ModelPerformanceAnalyzer = () => {
       return filteredData; // 返回所有符合條件的數據，排序交給表格處理
     } 
     else if (filterType === 'balanced') {
-      // 平衡模式：篩選符合資源限制的數據
+      // 權衡模式：篩選符合資源限制的數據
       filteredData = filteredData.filter(item => 
         item.avgInferenceTime <= inferenceTimeLimit &&
         item.mAP5095 >= mapLimit &&
@@ -506,7 +506,7 @@ const ModelPerformanceAnalyzer = () => {
       );
     }
     
-    // 在篩選模式和平衡模式下，圖表也需要篩選
+    // 在篩選模式和權衡模式下，圖表也需要篩選
     if (filterType === 'filter' || filterType === 'balanced') {
       data = data.filter(item => 
         item.avgInferenceTime <= inferenceTimeLimit &&
@@ -560,7 +560,7 @@ const ModelPerformanceAnalyzer = () => {
     const filteredData = getFilteredDataForDisplay();
     
     if (filterType === 'balanced') {
-      // 平衡模式只能按距離排序
+      // 權衡模式只能按距離排序
       return filteredData.sort((a, b) => a.distanceToLine - b.distanceToLine);
     }
     
@@ -908,7 +908,7 @@ const ModelPerformanceAnalyzer = () => {
     return option;
   };
   
-  // 獲取平衡模式散點圖配置
+  // 獲取權衡模式散點圖配置
   const getBalanceScatterChartOption = () => {
     if (!testData || testData.length === 0) return {};
     
@@ -1007,8 +1007,8 @@ const ModelPerformanceAnalyzer = () => {
     
     const option = {
       title: {
-        text: '平衡模式分析 - 推論時間加速比 vs 準確率下降比',
-        subtext: '最靠近對角線(y=x)的為最佳平衡',
+        text: '權衡模式分析 - 推論時間加速比 vs 準確率下降比',
+        subtext: '最靠近對角線(y=x)的為最佳權衡',
         left: 'center',
         top: 10,
         textStyle: { fontSize: 16 },
@@ -1255,7 +1255,7 @@ const ModelPerformanceAnalyzer = () => {
         '準確率比率': item => item.accuracyRatio.toFixed(4)
       };
       
-      // 如果是平衡模式，添加距離欄位
+      // 如果是權衡模式，添加距離欄位
       if (filterType === 'balanced') {
         baseMapping['距離Y=X線'] = item => item.distanceToLine ? item.distanceToLine.toFixed(4) : '';
       }
@@ -1438,7 +1438,7 @@ const ModelPerformanceAnalyzer = () => {
       }
     ];
 
-          // 平衡模式添加距離欄位
+          // 權衡模式添加距離欄位
       if (filterType === 'balanced') {
         baseColumns.push({
         title: '與y=x軸的距離',
@@ -1448,7 +1448,7 @@ const ModelPerformanceAnalyzer = () => {
         sorter: false,
         onHeaderCell: () => ({
           style: { 
-            color: '#ff4d4f', // 平衡模式下只能按此欄位排序，始终显示红色
+            color: '#ff4d4f', // 權衡模式下只能按此欄位排序，始终显示红色
             cursor: 'default'
           }
         }),
@@ -1460,7 +1460,7 @@ const ModelPerformanceAnalyzer = () => {
   
   return (
     <div style={{ padding: '20px' }}>
-      <Title level={2}>自動化測試結果分析儀表板</Title>
+      <Title level={2}>自動化模型性能評估結果分析儀表板</Title>
       <Divider />
       
       {/* 上傳與控制區域 */}
@@ -1509,8 +1509,8 @@ const ModelPerformanceAnalyzer = () => {
               <Tooltip title="提供篩選各指標的模式">
                 <Radio.Button value="filter">篩選模式</Radio.Button>
               </Tooltip>
-              <Tooltip title="提供交換最穩定或是最平衡的模型">
-                <Radio.Button value="balanced">平衡模式</Radio.Button>
+              <Tooltip title="提供交換最穩定或是最權衡的模型">
+                <Radio.Button value="balanced">權衡模式</Radio.Button>
               </Tooltip>
             </Radio.Group>
             
@@ -1798,11 +1798,11 @@ const ModelPerformanceAnalyzer = () => {
       {/* 圖表顯示區 */}
       {testData ? (
         <div ref={chartContainerRef}>
-          {/* 平衡模式特殊顯示 */}
+          {/* 權衡模式特殊顯示 */}
           {filterType === 'balanced' && (
             <Row gutter={24} style={{ marginBottom: '20px' }}>
               <Col span={24}>
-                <Card title="平衡模式分析 - 推論時間加速比 vs 準確率下降比">
+                <Card title="權衡模式分析 - 推論時間加速比 vs 準確率下降比">
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '10px' }}>
                     <ReactECharts
                       option={getBalanceScatterChartOption()}
@@ -1815,7 +1815,7 @@ const ModelPerformanceAnalyzer = () => {
             </Row>
           )}
           
-          {/* 四個比較圖表 - 在篩選模式和平衡模式下可折疊 */}
+          {/* 四個比較圖表 - 在篩選模式和權衡模式下可折疊 */}
           {filterType === 'filter' || filterType === 'balanced' ? (
             <Collapse 
               defaultActiveKey={chartsCollapsed ? [] : ['charts']}
@@ -2067,7 +2067,7 @@ const ModelPerformanceAnalyzer = () => {
       ) : (
         <Card style={{ textAlign: 'center', padding: '50px 0' }}>
           <Title level={4}>請選擇測試結果或上傳 JSON 檔案</Title>
-          <p>選擇測試結果後將顯示自動化測試結果分析圖表</p>
+          <p>選擇測試結果後將顯示自動化模型性能評估結果分析圖表</p>
         </Card>
       )}
     </div>

@@ -288,6 +288,9 @@ class ConversionService:
             # 配置中只需要指定非batch維度
             output_dims = "[ 56, -1 ]"  # 兩個動態維度
         
+        # 根據精度設置data_type
+        data_type = "TYPE_FP16" if precision == PrecisionType.FP16 else "TYPE_FP32"
+        
         # 生成基本配置 - max_batch_size 設定為原始 batch 大小
         config_content = f"""name: "{target_model_name}"
 platform: "{platform}"
@@ -295,14 +298,14 @@ max_batch_size: {batch_size}
 input [
   {{
     name: "images"
-    data_type: TYPE_FP32
+    data_type: {data_type}
     dims: [ 3, {img_size}, {img_size} ]
   }}
 ]
 output [
   {{
     name: "output0"
-    data_type: TYPE_FP32
+    data_type: {data_type}
     dims: {output_dims}
   }}
 ]
@@ -708,7 +711,7 @@ instance_group [
                 os.remove(temp_onnx_path)
                 os.remove(onnx_path)  # 清理源目錄中的ONNX檔案
                 print(f"清理臨時ONNX文件")
-                except Exception as e:
+            except Exception as e:
                 print(f"清理ONNX文件時出錯: {str(e)}")
             
             print(f"轉換流程完成：")

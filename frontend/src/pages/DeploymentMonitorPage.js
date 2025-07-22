@@ -260,21 +260,21 @@ const DeploymentMonitorPage = () => {
       ),
     },
     {
-      title: '推論次數',
-      dataIndex: 'inference_count',
-      key: 'inference_count',
+      title: '總請求次數',
+      dataIndex: 'execution_count',
+      key: 'execution_count',
       align: 'right',
       render: (count) => count || 0,
     },
     {
-      title: '總延遲',
+      title: '單張延遲(總)',
       dataIndex: 'avg_total_time_ms',
       key: 'avg_total_time_ms',
       align: 'right',
       render: (time) => formatInferenceTime(time),
     },
     {
-      title: '推理延遲',
+      title: '單張延遲(推理)',
       dataIndex: 'avg_infer_time_ms',
       key: 'avg_infer_time_ms',
       align: 'right',
@@ -369,8 +369,8 @@ const DeploymentMonitorPage = () => {
         <Col xs={24} md={6}>
           <Card>
             <Statistic
-              title="總推論次數"
-              value={loadedModels.reduce((total, model) => total + (model.inference_count || 0), 0)}
+              title="總請求次數"
+              value={loadedModels.reduce((total, model) => total + (model.execution_count || 0), 0)}
               prefix={<BarChartOutlined />}
               valueStyle={{ color: '#722ed1' }}
             />

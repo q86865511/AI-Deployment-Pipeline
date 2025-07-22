@@ -185,7 +185,7 @@ class InferenceService:
     """
     def __init__(self):
         """初始化推理服務"""
-        # 移除單次測試資料夾，只保留自動化測試功能
+        # 移除單次測試資料夾，只保留自動化模型性能評估功能
         self.model_service = ModelService()
         
         # 創建執行緒池用於YOLO操作
@@ -1064,10 +1064,10 @@ class InferenceService:
         from ultralytics import YOLO
         
         try:
-        task = self._get_task_from_model_type(model_type)
-        yolo_model = YOLO(model_path, task=task)
-        metrics = yolo_model.val(data=yaml_file, **validation_params)
-        return metrics.results_dict
+            task = self._get_task_from_model_type(model_type)
+            yolo_model = YOLO(model_path, task=task)
+            metrics = yolo_model.val(data=yaml_file, **validation_params)
+            return metrics.results_dict
         finally:
             # 驗證完成後清理runs目錄
             self._cleanup_runs_directory()
@@ -1077,19 +1077,19 @@ class InferenceService:
         from ultralytics import YOLO
         
         try:
-        task = self._get_task_from_model_type(source_type)
-        yolo_model = YOLO(source_path, task=task)
-        
-        # 根據格式設置參數
-        if model_format == "onnx":
-            validation_params["format"] = "onnx"
-            validation_params["model"] = model_path
-        elif model_format == "engine":
-            validation_params["format"] = "engine"
-            validation_params["model"] = model_path
-        
-        metrics = yolo_model.val(data=yaml_file, **validation_params)
-        return metrics.results_dict
+            task = self._get_task_from_model_type(source_type)
+            yolo_model = YOLO(source_path, task=task)
+            
+            # 根據格式設置參數
+            if model_format == "onnx":
+                validation_params["format"] = "onnx"
+                validation_params["model"] = model_path
+            elif model_format == "engine":
+                validation_params["format"] = "engine"
+                validation_params["model"] = model_path
+            
+            metrics = yolo_model.val(data=yaml_file, **validation_params)
+            return metrics.results_dict
         finally:
             # 驗證完成後清理runs目錄
             self._cleanup_runs_directory()
