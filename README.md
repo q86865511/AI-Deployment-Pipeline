@@ -610,6 +610,42 @@ curl http://localhost:8001/v2/health/ready
 - 查看 GPU exporter 日誌：`docker-compose logs nvidia-gpu-exporter`
 - 如果沒有 GPU，可以在 docker-compose.yml 中註解掉 nvidia-gpu-exporter 服務
 
+**Q: Docker 容器無法使用 GPU**
+如果在 Linux 系統上遇到 GPU 無法被 Docker 容器識別的問題，請檢查並配置 Docker daemon：
+
+1. **編輯 Docker daemon 配置文件**：
+   ```bash
+   sudo nano /etc/docker/daemon.json
+   ```
+
+2. **添加 NVIDIA runtime 配置**：
+   ```json
+   {
+     "default-runtime": "nvidia",
+     "runtimes": {
+       "nvidia": {
+         "path": "nvidia-container-runtime",
+         "runtimeArgs": []
+       }
+     }
+   }
+   ```
+
+3. **重啟 Docker 服務**：
+   ```bash
+   sudo systemctl restart docker
+   ```
+
+4. **驗證 GPU 可用性**：
+   ```bash
+   docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
+   ```
+
+**注意事項**：
+- 確保已正確安裝 NVIDIA Container Toolkit
+- 如果配置文件已存在其他設定，請合併配置而非覆蓋
+- 重啟 Docker 後需要重新啟動系統容器
+
 **Q: 測試任務執行異常**
 - 檢查數據集格式是否正確
 - 確認GPU驅動版本相容性
