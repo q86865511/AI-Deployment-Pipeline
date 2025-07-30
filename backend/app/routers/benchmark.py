@@ -348,7 +348,7 @@ async def create_test_task(
     background_tasks: BackgroundTasks = BackgroundTasks()
 ):
     """
-    創建自動化測試任務
+    創建自動化管線任務
     
     Args:
         model_id: 源模型ID

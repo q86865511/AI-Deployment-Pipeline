@@ -13,7 +13,7 @@ from app.services.inference_service import InferenceService
 
 class TestManager:
     """
-    測試管理服務，負責處理自動化測試流程
+    測試管理服務，負責處理自動化管線流程
     包括模型轉換、驗證和推論測試
     """
     def __init__(self):

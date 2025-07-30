@@ -1197,6 +1197,23 @@ class InferenceService:
             task = self._get_task_from_model_type(model_type)
             model = YOLO(model_path, task=task)
             
+            # 對於Engine模型，處理可能缺少的batch_size屬性
+            if model_path.endswith('.engine') or model_path.endswith('.plan'):
+                # 檢查AutoBackend是否有batch_size屬性
+                if hasattr(model, 'predictor') and hasattr(model.predictor, 'model'):
+                    backend_model = model.predictor.model
+                    if not hasattr(backend_model, 'batch_size'):
+                        # 從validation_params獲取batch size並設置
+                        batch_size = validation_params.get('batch', 1)
+                        backend_model.batch_size = batch_size
+                        print(f"為AutoBackend設置batch_size: {batch_size}")
+                elif hasattr(model, 'model') and not hasattr(model.model, 'batch_size'):
+                    # 直接在model上設置
+                    batch_size = validation_params.get('batch', 1)
+                    if hasattr(model.model, '__setattr__'):
+                        setattr(model.model, 'batch_size', batch_size)
+                        print(f"為模型設置batch_size: {batch_size}")
+            
             # 對於PT模型，移動到GPU
             if hasattr(model, 'model') and hasattr(model.model, 'to'):
                 if not model_path.endswith('.engine') and not model_path.endswith('.plan'):
