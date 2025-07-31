@@ -1199,7 +1199,7 @@ class InferenceService:
             model = YOLO(model_path, task=task)
             print(f"模型載入完成, 類型: {type(model)}")
             
-            # 檢查模型的內部結構
+            """ # 檢查模型的內部結構
             if hasattr(model, 'predictor'):
                 print(f"模型有predictor: {type(model.predictor)}")
                 if hasattr(model.predictor, 'model'):
@@ -1235,7 +1235,7 @@ class InferenceService:
                         setattr(model.model, 'batch_size', batch_size)
                         print(f"為模型設置batch_size: {batch_size} (類型: {type(batch_size)})")
                 else:
-                    print("未找到需要設置batch_size的模型對象")
+                    print("未找到需要設置batch_size的模型對象") """
 
             # 對於PT模型，移動到GPU
             if hasattr(model, 'model') and hasattr(model.model, 'to'):
