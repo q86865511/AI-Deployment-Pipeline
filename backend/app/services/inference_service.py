@@ -1199,43 +1199,6 @@ class InferenceService:
             model = YOLO(model_path, task=task)
             print(f"模型載入完成, 類型: {type(model)}")
             
-            """ # 檢查模型的內部結構
-            if hasattr(model, 'predictor'):
-                print(f"模型有predictor: {type(model.predictor)}")
-                if hasattr(model.predictor, 'model'):
-                    print(f"predictor有model: {type(model.predictor.model)}")
-            if hasattr(model, 'model'):
-                print(f"模型有model屬性: {type(model.model)}")
-            
-            # 對於Engine模型，處理可能缺少的batch_size屬性
-            if model_path.endswith('.engine') or model_path.endswith('.plan'):
-                print("處理Engine模型的batch_size屬性...")
-                
-                # 檢查AutoBackend是否有batch_size屬性
-                if hasattr(model, 'predictor') and hasattr(model.predictor, 'model'):
-                    backend_model = model.predictor.model
-                    print(f"發現predictor.model: {type(backend_model)}")
-                    
-                    if not hasattr(backend_model, 'batch_size'):
-                        # 從validation_params獲取batch size並設置（確保是整數）
-                        batch_param = validation_params.get('batch', 1)
-                        batch_size = int(batch_param) if batch_param is not None else 1
-                        backend_model.batch_size = batch_size
-                        print(f"為AutoBackend設置batch_size: {batch_size} (類型: {type(batch_size)})")
-                    else:
-                        print(f"AutoBackend已有batch_size: {backend_model.batch_size}")
-                        
-                elif hasattr(model, 'model') and not hasattr(model.model, 'batch_size'):
-                    print(f"發現model.model: {type(model.model)}")
-                    
-                    # 直接在model上設置（確保是整數）
-                    batch_param = validation_params.get('batch', 1)
-                    batch_size = int(batch_param) if batch_param is not None else 1
-                    if hasattr(model.model, '__setattr__'):
-                        setattr(model.model, 'batch_size', batch_size)
-                        print(f"為模型設置batch_size: {batch_size} (類型: {type(batch_size)})")
-                else:
-                    print("未找到需要設置batch_size的模型對象") """
 
             # 對於PT模型，移動到GPU
             if hasattr(model, 'model') and hasattr(model.model, 'to'):
@@ -1252,7 +1215,7 @@ class InferenceService:
             print(f"模型載入VRAM: {model_loading_vram:.1f} MB")
             
             # 對於Engine模型，需要執行一次推理來觸發VRAM分配
-            if model_path.endswith('.engine') or model_path.endswith('.plan'):
+            if model_path.endswith('.engine') :
                 print("執行一次推理以觸發Engine模型VRAM分配...")
                 import numpy as np
                 
@@ -1282,6 +1245,7 @@ class InferenceService:
             
             # 執行驗證
             print("開始執行驗證...")
+            print(f"驗證參數: {validation_params}")
             metrics = model.val(**validation_params)
             
             # 等待驗證完成

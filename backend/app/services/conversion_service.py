@@ -854,13 +854,18 @@ instance_group [
         
         return saved_job
 
-    async def wait_for_job_completion(self, job_id: str, timeout: int = 600) -> Optional[str]:
+    async def wait_for_job_completion(self, job_id: str, timeout: int = None) -> Optional[str]:
         """
         等待轉換任務完成，並返回轉換後的模型ID
         """
         from app.models import ConversionStatus
         import asyncio
+        import os
         import time
+        
+        # 如果沒有指定 timeout，從環境變數取得預設值（預設30分鐘）
+        if timeout is None:
+            timeout = int(os.getenv('CONVERSION_TIMEOUT_MINUTES', 30)) * 60
         
         start_time = time.time()
         

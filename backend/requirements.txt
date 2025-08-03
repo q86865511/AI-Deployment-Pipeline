@@ -7,7 +7,7 @@ onnx-simplifier
 onnxruntime-gpu==1.16.0
 pyyaml==6.0.1
 requests==2.31.0
-ultralytics>=8.0.0
+ultralytics==8.3.156
 numpy<2.0.0
 tensorrt==8.6.1
 pytest==7.4.3 

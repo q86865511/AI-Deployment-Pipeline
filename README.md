@@ -38,6 +38,68 @@
 
 ## 系統架構
 
+### 前端架構
+```mermaid
+graph TB
+    Browser[瀏覽器] --> Frontend[前端容器<br/>React + Ant Design]
+    Frontend --> |HTTP API| Backend[後端API]
+    
+    subgraph "前端組件架構"
+        Frontend --> Pages[頁面組件]
+        Frontend --> Components[共用組件]
+        Frontend --> Services[API服務]
+        Frontend --> Hooks[自定義Hooks]
+        
+        Pages --> ModelsPage[模型管理]
+        Pages --> ConversionPage[模型優化]
+        Pages --> BenchmarkPage[自動化管線]
+        Pages --> TestResultsPage[測試結果]
+        Pages --> AnalyzerPage[結果分析]
+        Pages --> MonitorPage[部署監控]
+        
+        Components --> Charts[圖表組件]
+        Components --> Forms[表單組件]
+        Components --> Tables[表格組件]
+        
+        Services --> ModelAPI[模型API]
+        Services --> ConversionAPI[轉換API]
+        Services --> BenchmarkAPI[評測API]
+    end
+```
+
+### 後端架構
+```mermaid
+graph TB
+    Frontend[前端] --> |HTTP/REST| Router[API路由層]
+    
+    subgraph "後端服務架構"
+        Router --> ModelsRouter[模型管理API]
+        Router --> ConversionRouter[轉換API]
+        Router --> BenchmarkRouter[評測API]
+        Router --> InferenceRouter[推理API]
+        Router --> TritonRouter[Triton API]
+        
+        ModelsRouter --> ModelService[模型服務]
+        ConversionRouter --> ConversionService[轉換服務]
+        BenchmarkRouter --> TestManager[測試管理器]
+        InferenceRouter --> InferenceService[推理服務]
+        TritonRouter --> TritonService[Triton服務]
+        
+        ConversionService --> |PT→ONNX→TensorRT| ModelRepo[模型庫]
+        InferenceService --> |推理執行| TritonServer[Triton推理服務器]
+        TestManager --> |自動化管線| ConversionService
+        TestManager --> |性能評測| InferenceService
+        
+        ModelRepo --> Storage[檔案存儲]
+        TritonServer --> ModelRepo
+    end
+    
+    subgraph "支援服務"
+        Prometheus[Prometheus監控] --> |收集指標| InferenceService
+        Grafana[Grafana視覺化] --> |查詢數據| Prometheus
+    end
+```
+
 ### 服務組件
 
 - **前端界面**: React + Ant Design 響應式Web界面
@@ -645,6 +707,60 @@ curl http://localhost:8001/v2/health/ready
 - 確保已正確安裝 NVIDIA Container Toolkit
 - 如果配置文件已存在其他設定，請合併配置而非覆蓋
 - 重啟 Docker 後需要重新啟動系統容器
+
+**Q: CPU轉換GPU失敗或CUDA記憶體錯誤**
+當遇到以下情況時，建議重啟Docker服務來解決GPU相關問題：
+
+**常見錯誤訊息**：
+- `CUDA error: an illegal memory access was encountered`
+- `CUDA kernel errors might be asynchronously reported`
+- `CPU轉換失敗，GPU不支援`
+- 模型轉換顯示成功但實際失敗
+
+**解決方法**：
+
+**Windows系統**：
+```cmd
+# 重啟Docker Desktop
+# 方法1: 通過GUI重啟
+# 右鍵點擊系統托盤的Docker圖標 → Restart
+
+# 方法2: 通過命令行重啟
+net stop com.docker.service
+net start com.docker.service
+
+# 重新啟動專案
+startup.bat
+```
+
+**Linux系統**：
+```bash
+# 停止當前容器
+docker-compose down
+
+# 重啟Docker服務
+sudo systemctl restart docker
+
+# 驗證GPU可用性
+docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
+
+# 重新啟動專案
+sudo ./startup.sh
+```
+
+**預防措施**：
+- 設定環境變數來增加轉換超時時間：
+  ```bash
+  # 設定轉換超時為60分鐘（預設30分鐘）
+  export CONVERSION_TIMEOUT_MINUTES=60
+  ```
+- 在docker-compose.yml中添加環境變數：
+  ```yaml
+  services:
+    backend:
+      environment:
+        - CONVERSION_TIMEOUT_MINUTES=60
+  ```
 
 **Q: 測試任務執行異常**
 - 檢查數據集格式是否正確

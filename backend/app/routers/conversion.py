@@ -24,13 +24,15 @@ async def list_conversion_jobs(
     # 重新載入任務數據，確保狀態更新
     conversion_service._load_jobs()
     
-    # 檢查處理中的任務是否已經超時（10分鐘）
+    # 檢查處理中的任務是否已經超時（預設30分鐘，可透過環境變數CONVERSION_TIMEOUT_MINUTES調整）
+    import os
+    timeout_minutes = int(os.getenv('CONVERSION_TIMEOUT_MINUTES', 30))
     jobs_to_update = {}
     for job_id, job in conversion_service.jobs.items():
         if job.status == ConversionStatus.PROCESSING:
-            # 檢查任務是否超過10分鐘沒有完成
+            # 檢查任務是否超過設定時間沒有完成
             if job.created_at:
-                if datetime.now(timezone(timedelta(hours=8))) - job.created_at > timedelta(minutes=10):
+                if datetime.now(timezone(timedelta(hours=8))) - job.created_at > timedelta(minutes=timeout_minutes):
                     print(f"任務 {job_id} 已超時，標記為失敗")
                     job.status = ConversionStatus.FAILED
                     job.error_message = "任務處理超時，可能已失敗"
