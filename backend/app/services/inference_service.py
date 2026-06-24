@@ -21,6 +21,8 @@ from queue import Queue
 import threading
 
 from app.models import ModelInfo, ModelPerformance, PrecisionType, ModelType
+from app.services.model_tasks import task_from_model_type
+from app.services.comparison import generate_comparison as compute_comparison
 
 def _get_gpu_memory_usage() -> float:
     """獲取GPU記憶體使用量 (MB) - 多種備用方法"""
@@ -195,16 +197,9 @@ class InferenceService:
         self.gpu_id = 0
     
     def _get_task_from_model_type(self, model_type: ModelType) -> str:
-        """根據模型類型確定YOLO task參數"""
-        if model_type == ModelType.YOLOV8_POSE:
-            return "pose"
-        elif model_type == ModelType.YOLOV8_SEG:
-            return "segment"
-        elif model_type == ModelType.YOLOV8:
-            return "detect"
-        else:
-            return "detect"  # 默認為檢測任務
-    
+        """根據模型類型確定YOLO task參數（委派至 model_tasks）"""
+        return task_from_model_type(model_type)
+
     def predict(self, model: ModelInfo, image_path: str, confidence: float = 0.25,
                iou_threshold: float = 0.45) -> Dict[str, Any]:
         """
@@ -578,56 +573,8 @@ class InferenceService:
         return device_info
 
     def generate_comparison(self, results: List[ModelPerformance]) -> Dict[str, Any]:
-        """生成模型性能比較結果"""
-        comparison = {
-            "models": [],
-            "inference_time_ms": [],
-            "throughput": [],
-            "memory_usage_mb": [],
-            "speedup": {},
-            "memory_reduction": {},
-            "best_performance": None,
-            "best_memory_efficiency": None
-        }
-        
-        # 收集基本數據
-        for perf in results:
-            comparison["models"].append(perf.model_id)
-            comparison["inference_time_ms"].append(perf.inference_time_ms)
-            comparison["throughput"].append(perf.throughput)
-            comparison["memory_usage_mb"].append(perf.memory_usage_mb)
-        
-        # 找出基準模型（首個結果）並計算相對指標
-        if results:
-            base_perf = results[0]
-            base_time = base_perf.inference_time_ms
-            base_memory = base_perf.memory_usage_mb
-            
-            # 計算每個模型相對於基準的加速比和內存減少率
-            for i, perf in enumerate(results):
-                if i > 0:  # 跳過基準模型自身
-                    model_id = perf.model_id
-                    comparison["speedup"][model_id] = round(base_time / perf.inference_time_ms, 2)
-                    comparison["memory_reduction"][model_id] = round(
-                        (base_memory - perf.memory_usage_mb) / base_memory * 100, 2
-                    )
-            
-            # 找出最佳性能和內存效率的模型
-            best_perf_idx = comparison["inference_time_ms"].index(min(comparison["inference_time_ms"]))
-            best_mem_idx = comparison["memory_usage_mb"].index(min(comparison["memory_usage_mb"]))
-            
-            comparison["best_performance"] = {
-                "model_id": results[best_perf_idx].model_id,
-                "inference_time_ms": results[best_perf_idx].inference_time_ms,
-                "throughput": results[best_perf_idx].throughput
-            }
-            
-            comparison["best_memory_efficiency"] = {
-                "model_id": results[best_mem_idx].model_id,
-                "memory_usage_mb": results[best_mem_idx].memory_usage_mb
-            }
-        
-        return comparison
+        """生成模型性能比較結果（委派至 comparison）"""
+        return compute_comparison(results)
 
     async def validate_model(self, model_id: str, dataset_id: str, batch_size: int = 1, custom_params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """

@@ -10,6 +10,7 @@ from app.models import ModelFormat, PrecisionType
 from app.services.model_service import ModelService
 from app.services.conversion_service import ConversionService
 from app.services.inference_service import InferenceService
+from app.services.combinations import build_test_combinations
 
 class TestManager:
     """
@@ -152,38 +153,8 @@ class TestManager:
         if model_type not in ["object", "pose"]:
             raise Exception(f"不支持的模型類型: {model_type}，必須為 'object' 或 'pose'")
         
-        # 生成所有測試組合，包含原始模型
-        combinations = []
-        
-        # 首先添加原始模型的測試組合
-        for batch_size in batch_sizes:
-            combinations.append({
-                "batch_size": batch_size,
-                "precision": "original",  # 標記為原始模型
-                "image_size": image_size,
-                "status": "completed",  # 原始模型不需要轉換
-                "conversion_job_id": None,
-                "target_model_id": model_id,  # 直接使用源模型ID
-                "inference_results": None,
-                "error": None,
-                "is_original": True  # 新增標記以區分原始模型
-            })
-        
-        # 然後添加轉換後模型的測試組合
-        for precision in precisions:
-            precision_enum = PrecisionType.FP16 if precision.lower() == 'fp16' else PrecisionType.FP32
-            for batch_size in batch_sizes:
-                combinations.append({
-                    "batch_size": batch_size,
-                    "precision": precision_enum.value,
-                    "image_size": image_size,
-                    "status": "pending",
-                    "conversion_job_id": None,
-                    "target_model_id": None,
-                    "inference_results": None,
-                    "error": None,
-                    "is_original": False  # 標記為轉換模型
-                })
+        # 生成所有測試組合（原始模型 + 各精度×批次的轉換模型；委派至 combinations）
+        combinations = build_test_combinations(model_id, batch_sizes, precisions, image_size)
         
         # 創建任務數據
         task = {

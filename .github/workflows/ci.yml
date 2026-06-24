@@ -25,6 +25,23 @@ jobs:
           pip install ruff==0.15.12
           ruff check app/
 
+  backend-tests:
+    name: backend (pytest — dependency-light)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # 純邏輯單元測試只依賴 pydantic（不需 torch/tensorrt/GPU），故獨立輕量安裝。
+      - name: 安裝測試相依
+        run: pip install pytest pydantic==2.4.2
+      - name: pytest（純邏輯 characterization 測試）
+        run: python -m pytest tests/ -q
+
   frontend-build:
     name: frontend (build)
     runs-on: ubuntu-latest
