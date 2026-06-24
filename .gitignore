@@ -1,0 +1,39 @@
+# --- 環境變數（含密鑰，切勿提交）---
+.env
+.env.local
+.env.*.local
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# --- Node / 前端 ---
+node_modules/
+/frontend/build/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- 執行期產物（不應進版控）---
+/backend/uploads/
+/backend/temp/
+/temp/
+/uploads/
+/backend/data/datasets/
+/backend/data/test_tasks/
+# TensorRT / ONNX 等模型產物
+*.engine
+*.plan
+model_repository/**/*.onnx
+model_repository/**/*.engine
+
+# --- 編輯器 / 系統 ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
