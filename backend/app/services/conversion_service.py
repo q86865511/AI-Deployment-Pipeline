@@ -8,6 +8,7 @@ from datetime import datetime, timezone, timedelta
 
 from app.models import ConversionJob, ConversionStatus, ModelFormat, PrecisionType, ModelInfo, ModelType
 from app.services.model_service import ModelService
+from app.services.model_tasks import task_from_model_type
 
 class ConversionService:
     """
@@ -26,15 +27,8 @@ class ConversionService:
         self._load_jobs()
     
     def _get_task_from_model_type(self, model_type: ModelType) -> str:
-        """根據模型類型確定YOLO task參數"""
-        if model_type == ModelType.YOLOV8_POSE:
-            return "pose"
-        elif model_type == ModelType.YOLOV8_SEG:
-            return "segment"
-        elif model_type == ModelType.YOLOV8:
-            return "detect"
-        else:
-            return "detect"  # 默認為檢測任務
+        """根據模型類型確定YOLO task參數（委派至 model_tasks）"""
+        return task_from_model_type(model_type)
     
     def get_jobs(self, status: Optional[ConversionStatus] = None, 
                  skip: int = 0, limit: int = 10) -> List[ConversionJob]:
