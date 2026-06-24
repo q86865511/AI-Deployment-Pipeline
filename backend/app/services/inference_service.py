@@ -283,8 +283,6 @@ class InferenceService:
         
         except Exception as e:
             # 確保資源被釋放
-            if 'yolo_model' in locals():
-                del yolo_model
             self._cleanup_gpu_resources()
             raise Exception(f"PyTorch推理失敗: {str(e)}")
     
