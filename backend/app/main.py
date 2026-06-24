@@ -12,10 +12,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# 配置CORS
+# 配置CORS：允許的來源由環境變數 CORS_ORIGINS（逗號分隔）注入，
+# 預設僅允許本機前端，避免 allow_origins=["*"] 搭配 allow_credentials 的風險。
+_cors_origins_env = os.environ.get("CORS_ORIGINS", "http://localhost:3000")
+allowed_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 實際部署時應限制來源
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

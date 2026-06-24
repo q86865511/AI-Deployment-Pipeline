@@ -12,6 +12,26 @@ from app.services.test_manager import TestManager
 router = APIRouter()
 test_manager = TestManager()
 
+
+def safe_extract_zip(zip_ref: zipfile.ZipFile, dest_dir: str) -> None:
+    """安全地解壓 ZIP：逐一驗證每個成員解壓後仍在 dest_dir 內，
+    防止 zip-slip（成員名稱含 ../ 或絕對路徑而逃逸到目標目錄之外）。
+    """
+    dest_root = os.path.abspath(dest_dir)
+    for member in zip_ref.namelist():
+        target_path = os.path.abspath(os.path.join(dest_root, member))
+        # os.path.commonpath 會在跨磁碟機等情況丟出 ValueError，視為不安全
+        try:
+            common = os.path.commonpath([dest_root, target_path])
+        except ValueError:
+            common = None
+        if common != dest_root:
+            raise HTTPException(
+                status_code=400,
+                detail=f"ZIP 檔包含不安全的路徑，已拒絕解壓: {member}",
+            )
+    zip_ref.extractall(dest_root)
+
 # 添加數據集相關端點
 @router.get("/datasets")
 async def get_datasets():
@@ -78,9 +98,9 @@ async def upload_dataset(
             contents = await file.read()
             f.write(contents)
         
-        # 解壓文件
+        # 解壓文件（逐成員驗證路徑，防止 zip-slip）
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(dataset_dir)
+            safe_extract_zip(zip_ref, dataset_dir)
         
         # 檢查是否為COCO格式數據集並創建YAML文件
         is_coco = False
