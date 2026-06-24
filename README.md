@@ -153,31 +153,34 @@ docker-compose up -d
 
 完整後端依賴(CUDA / TensorRT / Triton client)無法在一般 CI runner 上安裝,因此 CI(`.github/workflows/ci.yml`)採用**輕量守門**策略,在每次 push 到 `main` 與所有 PR 上執行:
 
-- **後端**:`python -m compileall`(語法檢查)＋ Ruff 真實錯誤子集(`E9, F63, F7, F82`,設定見 `backend/ruff.toml`)。
-- **前端**:`npm ci` ＋ `npm run build`(CRA production build)。
+- **後端(語法 / lint)**:`python -m compileall`(語法檢查)＋ Ruff 真實錯誤子集(`E9, F63, F7, F82`,設定見 `backend/ruff.toml`)。
+- **後端(單元測試)**:`pytest`——純邏輯模組(`app/services/{model_tasks,comparison,combinations}.py`)的 characterization 測試,只依賴 `pydantic`,免 GPU / TensorRT。
+- **前端**:`npm ci` ＋ `npm run build`(CRA production build);純函式 util(`src/utils/*`)另有 `react-scripts test`(jest)測試。
 
 本機重現:
 
 ```bash
-# 後端守門
+# 後端守門 + 純邏輯單元測試
 cd backend
 python -m compileall -q app
 pip install ruff==0.15.12 && ruff check app/
+pip install pytest pydantic==2.4.2 && python -m pytest tests/ -q
 
-# 前端 build
+# 前端 build + util 測試
 cd frontend
 npm ci
 CI=false npm run build
+CI=true npx react-scripts test --watchAll=false src/utils
 ```
 
-> 後端另含 `pytest` 依賴,完整單元測試需在具 GPU / TensorRT 的環境執行,目前未納入 CI。
+> 純邏輯單元測試(免 GPU)已納入 CI;需 GPU / TensorRT 的端到端推論 / 轉換整合測試仍須在具 GPU 的環境手動執行,未納入公開 CI。
 
 ## ⚠️ 已知限制
 
 - **硬性依賴 NVIDIA GPU**:轉換、推論與 GPU 監控皆需 NVIDIA GPU + CUDA + TensorRT,純 CPU 環境無法完整運作。
-- **CI 僅為輕量守門**:完整依賴無法在公開 CI 安裝,故 CI 僅做前端 build 與後端語法 / lint 檢查,不涵蓋端到端整合或 GPU 路徑。
+- **CI 為輕量守門 ＋ 純邏輯單元測試**:完整依賴無法在公開 CI 安裝,故 CI 做前端 build＋jest、後端語法 / lint＋純邏輯 pytest;不涵蓋需 GPU 的端到端整合或推論路徑。
 - **前端 lint 與後端 lint 尚未全面清理**:CRA build 以 `CI=false` 容忍既有 ESLint warning;Ruff 目前只擋真實錯誤子集,風格問題待後續清理。
-- **部分巨型服務檔待重構**:`inference_service.py`(約 1.7k 行)、`test_manager.py`、`conversion_service.py` 等檔案偏大,後續會拆分以利維護與測試。
+- **部分巨型服務檔待重構(進行中)**:已將可測的純邏輯(task 對應、效能比較、組合生成)抽成獨立模組並補單元測試;`inference_service.py`(約 1.7k 行)、`test_manager.py`、`conversion_service.py` 的 GPU / subprocess 重型程式碼仍偏大,需在具 GPU 的環境能行為驗證後再安全拆分。
 - **資料集約束**:標準化測試案例要求驗證集圖片數可被所有批次大小整除(例如 2304 張),否則部分組合無法整批推論。
 
 ## 📄 授權
