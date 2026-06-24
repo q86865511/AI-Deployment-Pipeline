@@ -47,6 +47,8 @@ services:
       - MODEL_REPOSITORY_PATH=/app/model_repository
       - PYTHONUNBUFFERED=1
       - TRITON_URL=http://triton:8000
+      # 允許的前端來源（逗號分隔），預設僅本機；正式部署請在 .env 覆寫
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level=debug
     depends_on:
       - backend-base
@@ -102,7 +104,8 @@ services:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      # 密碼改為必填環境變數，未在 .env 設定時 compose 會直接報錯，避免預設弱密碼。
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:?請在 .env 設定 GF_SECURITY_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
     restart: unless-stopped
