@@ -1,821 +1,185 @@
-# 具自動化模型優化評估和即時推論資源監控之AI部署平台
+# AI-Deployment-Pipeline
 
-## 📹 影片解說
+> YOLO 模型自動化「轉換 → 部署 → 評測」平台：一鍵把 PyTorch 權重壓成 TensorRT 引擎、部署到 Triton，並產出多組態效能基準與即時 GPU 監控。
 
-🎥 **系統展示影片**: [YouTube 解說影片](https://youtu.be/e8TkImJPilg)
+[![CI](https://github.com/q86865511/AI-Deployment-Pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/q86865511/AI-Deployment-Pipeline/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![Triton](https://img.shields.io/badge/NVIDIA%20Triton-23.04-76B900?logo=nvidia&logoColor=white)
+![TensorRT](https://img.shields.io/badge/TensorRT-8.6-76B900?logo=nvidia&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
 
-## 系統概述
+<p align="center"><img src="docs/architecture.svg" alt="系統架構" width="840"></p>
 
-本系統是一個企業級AI模型部署與性能監控平台，專為YOLO系列模型設計。系統整合了模型轉換、自動化管線、性能評估和推理服務部署等功能，提供完整的模型生命週期管理解決方案。
+🎥 **系統展示影片**：[YouTube 解說影片](https://youtu.be/e8TkImJPilg)
 
-### 核心功能
+## 這是什麼
 
-1. **模型管理與格式轉換**
-   - 支援PT、ONNX、TensorRT格式模型上傳與管理
-   - 自動化模型格式轉換（PT → ONNX → TensorRT）
-   - 支援FP32、FP16精度轉換
-   - 模型版本控制與元數據管理
+本專案是一套針對 YOLO 系列模型的**端到端模型部署與效能評測平台**。它把「模型格式轉換 → 推論服務部署 → 多組態基準測試 → 結果分析 → 資源監控」串成一條自動化管線，讓使用者透過網頁介面即可完成原本需要手動操作 TensorRT、Triton、Prometheus 的繁瑣流程。
 
-2. **自動化管線與模型性能評估**
-   - 批量模型轉換與驗證管線
-   - 多批次大小、多精度組合測試
-   - 模型準確度驗證（mAP50、mAP50-95等指標）
-   - 推理性能自動化模型性能評估（延遲、吞吐量、GPU使用率）
+典型情境:上傳一個 `YOLOv8n-Pose.pt`,勾選要測的精度(FP32 / FP16)與批次大小(1、2、4、8…),系統會自動把每一種組合轉成 ONNX 與 TensorRT 引擎、部署到 Triton、在驗證資料集上跑準確度(mAP)與效能(延遲 / 吞吐量 / VRAM)量測,最後在前端以圖表呈現速度與準確度的權衡,並可匯出 PDF / Excel 報告。
 
-3. **推理服務部署**
-   - 基於NVIDIA Triton Inference Server的生產級推理服務
-   - 動態模型掛載/卸載
-   - 即時推理性能監控
-   - RESTful API推理服務
+組成:
 
-4. **智能分析與可視化**
-   - 多維度性能分析與比較
-   - 互動式圖表與數據導出
-   - 測試結果自動化報告生成
-   - 性能優化建議
+- **後端**:Python + FastAPI 非同步 API,負責轉換、推論、測試管理與 Triton 整合。
+- **前端**:Create React App + Ant Design,搭配 ECharts / Recharts 做結果可視化。
+- **推論服務**:NVIDIA Triton Inference Server,以 explicit 模式動態掛載 / 卸載模型。
+- **監控**:Prometheus 收集指標、Grafana 呈現儀表板,涵蓋 CPU / 記憶體 / GPU 利用率 / VRAM 與 Triton 推論指標。
+- **編排**:Docker Compose,後端、Triton、GPU exporter 皆掛載 NVIDIA GPU。
 
-5. **即時監控與資源管理**
-   - 基於 Prometheus + Grafana 的監控棧
-   - CPU 使用率、記憶體使用率即時監控
-   - GPU 負載、GPU VRAM 使用率追蹤
-   - 系統資源視覺化儀表板
+## ✨ 技術亮點
 
-## 系統架構
+- **PT → ONNX → TensorRT 自動轉換管線**：以 Ultralytics + ONNX + TensorRT 工具鏈,將 PyTorch 權重逐步轉為 ONNX、再編譯為 TensorRT 引擎,支援 FP32 / FP16 精度與指定批次大小,並自動生成 Triton 所需的 `config.pbtxt`。
+- **多 batch × 多精度的基準測試矩陣**：自動展開「精度 × 批次大小」的組合矩陣(例如 2 精度 × 6 批次 = 12 組),對每組做重複量測並記錄平均值與標準差,輸出延遲、FPS、GPU 使用率、VRAM 等指標。
+- **準確度與效能雙軌評估**：在驗證資料集上計算 mAP50 / mAP50-95,搭配效能量測,於前端以「速度 vs 準確度」帕累托前沿協助選型。
+- **Triton 生產級部署**：以 `--model-control-mode=explicit` 動態掛載 / 卸載模型,提供 HTTP / gRPC 推論與 metrics 端點。
+- **GPU 與系統即時監控**：node-exporter(系統)、nvidia-gpu-exporter(GPU 利用率 / VRAM)與 Triton metrics 三路指標匯入 Prometheus,Grafana 自動載入儀表板。
+- **近期安全加固**(見「已知限制」前的說明):
+  - **CORS 來源改由環境變數注入**(`CORS_ORIGINS`),避免 `allow_origins=["*"]` 搭配憑證的風險。
+  - **資料集 ZIP 安全解壓**:`safe_extract_zip()` 逐一驗證每個成員解壓後仍落在目標目錄內,防止 zip-slip 路徑穿越。
+  - **Grafana 管理員密碼改為必填環境變數**(`GF_SECURITY_ADMIN_PASSWORD`),未設定時 Docker Compose 直接報錯,杜絕預設弱密碼。
+  - **移除未使用的 flask 依賴**,縮小依賴面與攻擊面。
 
-### 前端架構
+## 🏗️ 架構
+
+頂部 hero 圖呈現整體系統;下方 mermaid 聚焦資料流——前端呼叫 FastAPI `/api`,由轉換 / 推論 / 測試服務驅動 Triton 與模型庫,Prometheus 抓取 Triton 與 exporter 指標供 Grafana 視覺化。
+
 ```mermaid
-graph TB
-    Browser[瀏覽器] --> Frontend[前端容器<br/>React + Ant Design]
-    Frontend --> |HTTP API| Backend[後端API]
-    
-    subgraph "前端組件架構"
-        Frontend --> Pages[頁面組件]
-        Frontend --> Components[共用組件]
-        Frontend --> Services[API服務]
-        Frontend --> Hooks[自定義Hooks]
-        
-        Pages --> ModelsPage[模型管理]
-        Pages --> ConversionPage[模型優化]
-        Pages --> BenchmarkPage[自動化管線]
-        Pages --> TestResultsPage[測試結果]
-        Pages --> AnalyzerPage[結果分析]
-        Pages --> MonitorPage[部署監控]
-        
-        Components --> Charts[圖表組件]
-        Components --> Forms[表單組件]
-        Components --> Tables[表格組件]
-        
-        Services --> ModelAPI[模型API]
-        Services --> ConversionAPI[轉換API]
-        Services --> BenchmarkAPI[評測API]
+flowchart LR
+    subgraph Client["瀏覽器"]
+        FE["前端<br/>CRA + Ant Design<br/>ECharts / Recharts"]
     end
-```
 
-### 後端架構
-```mermaid
-graph TB
-    Frontend[前端] --> |HTTP/REST| Router[API路由層]
-    
-    subgraph "後端服務架構"
-        Router --> ModelsRouter[模型管理API]
-        Router --> ConversionRouter[轉換API]
-        Router --> BenchmarkRouter[評測API]
-        Router --> InferenceRouter[推理API]
-        Router --> TritonRouter[Triton API]
-        
-        ModelsRouter --> ModelService[模型服務]
-        ConversionRouter --> ConversionService[轉換服務]
-        BenchmarkRouter --> TestManager[測試管理器]
-        InferenceRouter --> InferenceService[推理服務]
-        TritonRouter --> TritonService[Triton服務]
-        
-        ConversionService --> |PT→ONNX→TensorRT| ModelRepo[模型庫]
-        InferenceService --> |推理執行| TritonServer[Triton推理服務器]
-        TestManager --> |自動化管線| ConversionService
-        TestManager --> |性能評測| InferenceService
-        
-        ModelRepo --> Storage[檔案存儲]
-        TritonServer --> ModelRepo
+    subgraph API["後端 FastAPI (/api)"]
+        CONV["轉換服務<br/>conversion_service"]
+        INF["推論服務<br/>inference_service"]
+        TEST["測試管理器<br/>test_manager"]
+        TRI["Triton 整合<br/>triton_service"]
     end
-    
-    subgraph "支援服務"
-        Prometheus[Prometheus監控] --> |收集指標| InferenceService
-        Grafana[Grafana視覺化] --> |查詢數據| Prometheus
+
+    TRITON["NVIDIA Triton<br/>Inference Server"]
+    REPO[("模型庫 / 資料集<br/>共享 Volume")]
+
+    subgraph Mon["監控"]
+        PROM["Prometheus"]
+        GRAF["Grafana 儀表板"]
+        NODE["node-exporter"]
+        GPU["nvidia-gpu-exporter"]
     end
+
+    FE -->|HTTP REST| CONV
+    FE -->|HTTP REST| INF
+    FE -->|HTTP REST| TEST
+    FE -->|HTTP REST| TRI
+
+    CONV -->|PT→ONNX→TensorRT| REPO
+    TEST -->|展開測試矩陣| CONV
+    TEST -->|效能 / 準確度量測| INF
+    TRI -->|掛載 / 卸載| TRITON
+    INF -->|推論請求| TRITON
+    TRITON --> REPO
+
+    TRITON -->|/metrics| PROM
+    NODE --> PROM
+    GPU --> PROM
+    PROM --> GRAF
 ```
 
-### 服務組件
+## 🚀 快速開始
 
-- **前端界面**: React + Ant Design 響應式Web界面
-- **後端API**: FastAPI 高性能異步API服務
-- **推理引擎**: NVIDIA Triton Inference Server
-- **模型轉換**: YOLOv8 + ONNX + TensorRT工具鏈
-- **數據分析**: 內建性能分析與可視化引擎
-- **監控系統**: Prometheus 指標收集 + Grafana 視覺化
-
-### 部署架構
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Web Browser                          │
-│         主界面(3000) | 監控界面(3001)                    |
-└─────────────────────┬───────────────────────────────────┘
-                      │
-┌─────────────────────┼───────────────────────────────────┐
-│              Frontend Container                         │
-│              React + Ant Design                         │
-└─────────────────────┬───────────────────────────────────┘
-                      │ HTTP API
-┌─────────────────────┼───────────────────────────────────┐
-│              Backend Container                          │
-│              FastAPI + Python                           │
-│          (localhost:8000)                               │
-└─────────────────────┬───────────────────────────────────┘
-                      │ HTTP/gRPC
-┌─────────────────────┼───────────────────────────────────┐
-│           Triton Inference Server                       │
-│              (localhost:8001/8002)                      │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-           ┌──────────┴──────────┐
-           │   Model Repository  │
-           │   Shared Volume     │
-           └─────────────────────┘
-
-┌─────────────────────────────────────────────────────────┐
-│                 監控系統架構                             │
-├─────────────────────┬───────────────────────────────────┤
-│    Grafana (3001)   │    Prometheus (9090)              │
-│    視覺化儀表板      │    指標收集與儲存                   │
-└─────────────────────┼───────────────────────────────────┘
-                      │ 指標查詢
-        ┌─────────────┼─────────────┐
-        │             │             │
-   ┌────▼─────┐  ┌────▼────┐  ┌─────▼──────┐
-   │Node      │  │GPU      │  │Triton      │
-   │Exporter  │  │Exporter │  │Metrics     │
-   │(9100)    │  │(9445)   │  │(8002)      │
-   └──────────┘  └─────────┘  └────────────┘
-```
-
-## 系統要求
-
-### 硬體需求
-- **GPU**: NVIDIA GPU（支援CUDA 11.4+）
-- **記憶體**: 至少16GB RAM
-- **儲存**: 至少50GB可用空間
-- **處理器**: Intel/AMD x64處理器
-
-### 軟體需求
-- **作業系統**: Windows 10/11、Ubuntu 18.04+、CentOS 7+
-- **Docker**: Docker Desktop 或 Docker CE
-- **Docker Compose**: v2.0+
-- **NVIDIA Container Toolkit**: 支援GPU容器化
-
-## 安裝與部署
+> ⚠️ 本平台需要 **NVIDIA GPU** 並安裝 **NVIDIA Container Toolkit**;後端、Triton 與 GPU exporter 都會請求 GPU 資源。
 
 ### 前置需求
 
-1. **Docker Desktop** (Windows/Mac) 或 **Docker Engine** (Linux)
-2. **NVIDIA Container Toolkit** (用於 GPU 支援)
-3. **至少 16GB RAM** 和 **50GB 可用硬碟空間**
-4. **NVIDIA GPU** (支援 CUDA 11.4+)
+- Docker Desktop(Windows / macOS)或 Docker Engine(Linux)
+- Docker Compose v2+
+- NVIDIA GPU(CUDA 11.4+)、NVIDIA Container Toolkit
+- 建議至少 16GB RAM 與 50GB 可用空間
 
-### Windows 用戶安裝步驟
+### 1. 取得專案並設定環境變數
 
-1. **安裝 Docker Desktop**
-   - 下載並安裝 [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop)
-   - 在設定中啟用 WSL 2 後端
-   - 啟用 GPU 支援（設定 → Resources → WSL Integration）
-
-2. **克隆專案**
-   ```cmd
-   git clone <https://github.com/q86865511/AI-Deployment-Pipeline>
-   cd Sys
-   ```
-
-3. **啟動系統**
-   ```cmd
-   startup.bat
-   ```
-
-### Linux 用戶安裝步驟
-
-1. **安裝 Docker 和 NVIDIA Container Toolkit**
-   ```bash
-   # 安裝 Docker
-   curl -fsSL https://get.docker.com -o get-docker.sh
-   sudo sh get-docker.sh
-   sudo usermod -aG docker $USER
-
-   # 安裝 NVIDIA Container Toolkit
-   distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-   curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
-   curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
-   
-   sudo apt-get update && sudo apt-get install -y nvidia-docker2
-   sudo systemctl restart docker
-   ```
-
-2. **克隆專案**
-   ```bash
-   git clone <https://github.com/q86865511/AI-Deployment-Pipeline>
-   cd Sys
-   ```
-
-3. **啟動系統**
-   ```bash
-   chmod +x startup.sh
-   sudo ./startup.sh
-   ```
-
-### 啟動腳本說明
-
-**Windows (startup.bat)**
-- 自動檢查 Docker 是否安裝和運行
-- 檢測並建構基礎映像（如有更新）
-- 啟動所有服務容器
-- 自動開啟網頁介面
-
-**Linux (startup.sh)**
-- 支援快速啟動模式：`./startup.sh --quick` (跳過基礎映像檢查)
-- 自動處理權限和依賴檢查
-- 提供即時日誌查看指令
-
-### 服務端點
-
-啟動成功後，可通過以下 URL 訪問各項服務：
-
-| 服務 | URL | 說明 |
-|------|-----|------|
-| 主界面 | http://localhost:3000 | React 前端應用程式 |
-| API 服務 | http://localhost:8000 | FastAPI 後端服務 |
-| API 文檔 | http://localhost:8000/docs | Swagger UI 互動式文檔 |
-| Grafana 監控 | http://localhost:3001 | 系統資源監控儀表板 |
-| Prometheus | http://localhost:9090 | 指標數據查詢介面 |
-| Triton Metrics | http://localhost:8002/metrics | 推理服務器指標 |
-
-### Grafana 監控系統登入資訊
-
-**預設登入帳號**：
-- 帳號：`admin`
-- 密碼：`admin`
-- 首次登入後會要求更改密碼，可以跳過或設定新密碼
-
-**儀表板說明**：
-- 系統會自動載入預設的系統監控儀表板
-- 監控項目包含：CPU 使用率、記憶體使用率、GPU 負載、VRAM 使用率
-- 資料刷新頻率：5 秒更新一次
-
-## 案例使用說明
-
-### 標準化測試案例
-
-本系統提供完整的 AI 模型效能評估案例，採用統一的測試標準確保結果一致性和可比較性。
-
-**案例設計標準**：
-- **基礎架構**：統一使用 YOLOv8n-Pose 模型作為測試基準
-- **訓練資料集**：在 COCO 2017-pose (val 2336 張圖片) 資料集上完成訓練
-- **測試參數組合**：
-  - 精度選項：FP32（單精度）、FP16（半精度）
-  - 批次大小：1,2,4,8,16,32
-- **測試重複性**：每個配置進行 100 次重複推論測量
-- **穩定性評估**：記錄平均值與標準差以評估性能穩定性
-
-**資料集配置要求**：
-- 驗證資料集圖片數量必須能被所有批次大小整除
-- 建議使用 COCO val2017 子集，確保總圖片數為 32 的倍數
-- 例如：2304 張圖片（可被 1, 2, 4, 8, 16, 32 整除）
-
-**測試輸出指標**：
-- **準確度指標**：mAP50、mAP50-95、各類別 AP 值
-- **性能指標**：平均推理時間、FPS、GPU 使用率、VRAM 使用量
-- **穩定性分析**：標準差、變異係數、置信區間
-
-### 案例目標與應用場景
-
-本標準化測試案例適用於以下場景：
-- **模型選型決策**：比較不同精度和批次配置的效能表現
-- **硬體規劃**：評估 GPU 記憶體需求和計算資源配置
-- **生產部署參考**：為實際部署環境選擇最佳參數組合
-- **學術研究基準**：提供標準化的效能評估參考框架
-- **持續整合測試**：作為 CI/CD 管線中的效能回歸測試
-
-### 自動化管線執行流程
-
-#### 階段一：準備與設定（模型管理頁面）
-1. **上傳基礎模型**：
-   - 進入「模型管理」頁面
-   - 上傳 YOLOv8n-Pose.pt 訓練完成的模型文件
-   - 填寫模型資訊：名稱、類型（detection-pose）、描述
-
-2. **準備驗證資料集**：
-   - 準備 COCO 2017-pose 格式的 JSON 標註文件
-   - 確保圖片數量為 2304 張（32 的倍數，可被所有批次大小整除）
-   - 驗證標註格式包含關鍵點座標資訊
-
-#### 階段二：啟動自動化管線（自動化管線頁面）
-1. **進入管線配置**：
-   - 點擊左側選單「自動化管線」
-   - 選擇已上傳的 YOLOv8n-Pose 基礎模型
-
-2. **配置測試參數**：
-   ```
-   基礎模型：YOLOv8n-Pose.pt
-   精度選項：☑ FP32  ☑ FP16
-   批次大小：[1, 2, 4, 8, 16, 32]
-   驗證數據集：上傳 COCO-pose val.json
-   測試迭代次數：100
-   工作空間大小：4 GB
-   ```
-
-3. **啟動自動化流程**：
-   - 點擊「開始自動化管線」
-   - 系統自動生成 12 個測試組合（2 精度 × 6 批次）
-
-#### 階段三：自動化轉換過程
-**系統自動執行以下步驟**：
-
-1. **PT → ONNX 轉換**：
-   - FP32 精度：生成 `model-fp32-batch{1,2,4,8,16,32}.onnx`
-   - FP16 精度：生成 `model-fp16-batch{1,2,4,8,16,32}.onnx`
-
-2. **ONNX → TensorRT 轉換**：
-   - 自動優化生成 `model-fp32-batch{1,2,4,8,16,32}.engine`
-   - 自動優化生成 `model-fp16-batch{1,2,4,8,16,32}.engine`
-
-3. **Triton 模型部署**：
-   - 自動配置 Triton 模型倉庫
-   - 動態掛載轉換完成的模型
-   - 生成對應的 config.pbtxt 配置文件
-
-#### 階段四：性能評估執行
-**對每個模型組合執行**：
-
-1. **準確度驗證**：
-   - 在 2304 張驗證圖片上執行推論
-   - 計算 mAP50、mAP50-95 等關鍵點檢測指標
-   - 生成各類別準確度分析
-
-2. **性能測試**：
-   - 執行 100 次重複推論測量
-   - 記錄推理時間、GPU 使用率、VRAM 消耗
-   - 計算平均值、標準差、95% 置信區間
-
-3. **實時監控**：
-   - 管線執行期間可在「部署平台監控」頁面查看進度
-   - Grafana 儀表板顯示即時系統資源使用狀況
-
-#### 階段五：結果分析與輸出
-1. **測試結果查看頁面**：
-   - 自動跳轉到「測試結果查看」頁面
-   - 顯示完整的測試摘要和詳細結果表格
-   - 提供 JSON 格式原始數據下載
-
-2. **自動化結果分析頁面**：
-   - 多維度性能分析圖表：
-     - 推理時間對比圖（不同批次大小 vs 推理延遲）
-     - 準確度對比圖（FP32 vs FP16 精度損失分析）
-     - GPU 資源使用圖（VRAM vs 批次大小關係）
-     - 效能權衡分析（速度 vs 準確度帕累托前沿）
-   - 智能篩選和排序功能
-   - 導出 PDF 報告和 Excel 數據表
-
-#### 完整案例執行時間預估
-- **模型轉換階段**：約 15-30 分鐘（12 個模型組合）
-- **準確度驗證階段**：約 45-60 分鐘（2304 張圖片 × 12 組合）
-- **性能測試階段**：約 30-45 分鐘（100 次 × 12 組合）
-- **總執行時間**：約 1.5-2.5 小時（視 GPU 性能而定）
-
-## 頁面使用指南
-
-### 1. 模型管理頁面
-
-**功能說明**：集中管理所有 AI 模型，支援上傳、下載、刪除和詳情查看。
-
-**使用步驟**：
-1. 點擊左側選單「模型管理」進入頁面
-2. **上傳模型**：
-   - 點擊「上傳模型」按鈕
-   - 選擇模型文件（支援 .pt、.onnx、.engine、.plan 格式）
-   - 填寫模型資訊（名稱、類型、描述）
-   - 點擊「確定」完成上傳
-3. **模型操作**：
-   - 詳情：查看模型詳細資訊
-   - 下載：下載模型文件到本地
-   - 掛載/卸載：將模型部署到 Triton 推理服務器
-   - 刪除：永久刪除模型文件
-
-### 2. 模型優化頁面
-
-**功能說明**：將 PyTorch 模型轉換為優化的 ONNX 或 TensorRT 格式。
-
-**使用步驟**：
-1. 點擊左側選單「模型優化」進入頁面
-2. **創建轉換任務**：
-   - 選擇來源模型（PT 格式）
-   - 選擇目標格式（ONNX 或 ENGINE）
-   - 配置轉換參數：
-     - 精度：FP32（預設）或 FP16（半精度）
-     - 批次大小：推理時的批次大小
-     - 工作空間：TensorRT 優化使用的記憶體大小（GB）
-   - 點擊「提交轉換」
-3. **查看轉換進度**：
-   - 轉換任務列表顯示即時狀態
-   - 點擊「詳情」查看詳細日誌
-   - 完成後可在模型管理頁面查看新模型
-
-### 3. 自動化管線頁面
-
-**功能說明**：批量執行模型轉換、性能評估和準確度驗證的完整管線。
-
-**使用步驟**：
-1. 點擊左側選單「自動化管線」進入頁面
-2. **配置管線參數**：
-   - 選擇基礎模型（PT 格式）
-   - 設定精度選項：FP32、FP16 或兩者都測試
-   - 批次大小組合：例如 [1, 4, 8, 16]
-   - 上傳驗證數據集（COCO 格式 JSON）
-   - 測試迭代次數：建議 100-1000 次
-3. **啟動管線**：
-   - 點擊「開始自動化管線」
-   - 系統自動執行：
-     - 模型格式轉換（PT → ONNX → TensorRT）
-     - 準確度驗證（計算 mAP）
-     - 性能評估（推理延遲、吞吐量、GPU 使用率）
-4. **監控進度**：
-   - 即時查看當前執行階段
-   - 查看各組合的測試進度
-   - 完成後自動跳轉到結果頁面
-
-### 4. 測試結果查看頁面
-
-**功能說明**：查看自動化管線的詳細測試結果。
-
-**使用步驟**：
-1. 點擊左側選單「測試結果查看」進入頁面
-2. 選擇或搜尋測試任務
-3. 查看結果包含：
-   - 基本資訊：模型名稱、測試時間、參數配置
-   - 準確度指標：mAP50、mAP50-95、各類別 AP
-   - 性能指標：平均推理時間、FPS、GPU 使用率
-   - 詳細結果表格：所有測試組合的完整數據
-
-### 5. 自動化結果分析頁面
-
-**功能說明**：多維度可視化分析測試結果，提供性能優化建議。
-
-**使用步驟**：
-1. 點擊左側選單「自動化結果分析」進入頁面
-2. 選擇測試任務或上傳 JSON 結果文件
-3. **查看分析圖表**：
-   - 推理時間對比圖：不同配置的延遲比較
-   - 準確度對比圖：各配置的 mAP 比較
-   - GPU 資源使用圖：顯卡負載和記憶體使用
-   - 效能權衡分析圖：速度與準確度的帕累托前沿
-4. **篩選和排序**：
-   - 設定推理時間上限
-   - 設定準確度下限
-   - 設定 GPU 資源限制
-       - 選擇權衡模式（速度優先/準確度優先/權衡）
-5. **導出報告**：
-   - PDF 格式：包含所有圖表的完整報告
-   - Excel 格式：原始數據表格
-
-### 6. 部署平台監控頁面
-
-**功能說明**：監控 Triton 推理服務器上的模型運行狀態。
-
-**使用步驟**：
-1. 點擊左側選單「部署平台監控」進入頁面
-2. **查看服務狀態**：
-   - Triton 服務器健康狀態
-   - 已掛載模型數量和列表
-   - 各模型的運行統計
-3. **模型管理**：
-   - 即時查看推理請求次數
-   - 監控平均延遲和最後推理時間
-   - 卸載不需要的模型
-4. **系統資源監控**：
-   - 點擊「系統資源監控」按鈕
-   - 自動開啟 Grafana 儀表板（http://localhost:3001）
-   - 登入帳號：admin / admin
-   - 查看 CPU、記憶體、GPU、VRAM 即時狀態
-
-## 監控與運維
-
-### 監控功能
-
-#### 應用層監控
-- **即時服務狀態**: Triton服務器健康狀態監控
-- **模型運行統計**: 推理次數、平均延遲、成功率
-- **性能指標追蹤**: 推理延遲分佈、吞吐量統計
-
-#### 系統層監控 (Prometheus + Grafana)
-
-**已實現功能**:
-- **系統資源監控**: CPU 使用率、記憶體使用率即時追蹤
-- **GPU 狀態監控**: GPU 負載、VRAM 使用率詳細統計
-- **Triton 服務監控**: 推理服務器性能指標收集
-- **視覺化儀表板**: 四象限監控面板，5秒刷新頻率
-
-**Prometheus監控指標收集**:
-- Node Exporter (9100): 系統 CPU、記憶體、磁碟、網路指標
-- NVIDIA GPU Exporter (9445): GPU 使用率、VRAM、溫度等指標
-- Triton 服務器指標（http://localhost:8002/metrics）
-- 自動指標發現與收集
-
-
-## 專案結構
-
-### 目錄結構說明
-
-```
-Sys/
-├── backend/                     # 後端服務目錄
-│   ├── app/                    # FastAPI 應用程式
-│   │   ├── __init__.py
-│   │   ├── main.py            # 應用程式入口
-│   │   ├── models/            # 數據模型定義
-│   │   │   ├── __init__.py
-│   │   │   └── model.py       # 資料庫模型
-│   │   ├── routers/           # API 路由端點
-│   │   │   ├── __init__.py
-│   │   │   ├── benchmark.py   # 自動化管線 API
-│   │   │   ├── conversion.py  # 模型轉換 API
-│   │   │   ├── inference.py   # 推理服務 API
-│   │   │   ├── models.py      # 模型管理 API
-│   │   │   └── triton.py      # Triton 整合 API
-│   │   ├── services/          # 業務邏輯層
-│   │   │   ├── __init__.py
-│   │   │   ├── conversion_service.py   # 模型轉換服務
-│   │   │   ├── inference_service.py    # 推理執行服務
-│   │   │   ├── model_service.py        # 模型管理服務
-│   │   │   ├── test_manager.py         # 自動化管線管理
-│   │   │   └── triton_service.py       # Triton 服務介面
-│   │   └── utils/             # 工具函數
-│   │       ├── __init__.py
-│   │       ├── tensorrt_utils.py  # TensorRT 工具
-│   │       └── timezone.py        # 時區處理
-│   ├── data/                  # 臨時數據目錄
-│   ├── uploads/               # 上傳文件暫存
-│   ├── model_repository/      # 模型文件存儲
-│   ├── Dockerfile             # 後端容器映像
-│   ├── Dockerfile.base        # 後端基礎映像
-│   └── requirements.txt       # Python 套件依賴
-│
-├── frontend/                   # 前端服務目錄
-│   ├── public/                # 公開靜態資源
-│   │   ├── index.html        # HTML 入口
-│   │   └── manifest.json     # PWA 配置
-│   ├── src/                   # React 原始碼
-│   │   ├── App.js            # 主應用程式組件
-│   │   ├── App.css           # 全域樣式
-│   │   ├── index.js          # 應用程式入口
-│   │   ├── components/       # 共用組件
-│   │   ├── hooks/            # 自定義 Hooks
-│   │   ├── pages/            # 頁面組件
-│   │   │   ├── HomePage.js              # 首頁
-│   │   │   ├── ModelsPage.js            # 模型管理
-│   │   │   ├── ModelDetailPage.js       # 模型詳情
-│   │   │   ├── ConversionPage.js        # 模型優化
-│   │   │   ├── ConversionDetailPage.js  # 轉換詳情
-│   │   │   ├── BenchmarkPage.js         # 自動化管線
-│   │   │   ├── TestResultsPage.js       # 測試結果查看
-│   │   │   ├── PerformanceAnalyzerPage.js # 自動化結果分析
-│   │   │   ├── DeploymentMonitorPage.js # 部署平台監控
-│   │   │   └── SettingsPage.js          # 系統設定
-│   │   ├── services/         # API 服務層
-│   │   └── utils/            # 工具函數
-│   ├── Dockerfile            # 前端容器映像
-│   ├── Dockerfile.base       # 前端基礎映像
-│   ├── package.json          # NPM 套件配置
-│   └── package-lock.json     # NPM 套件鎖定
-│
-├── monitoring/                # 監控系統配置
-│   ├── prometheus/           # Prometheus 配置
-│   │   └── prometheus.yml    # 指標收集配置
-│   └── grafana/              # Grafana 配置
-│       └── provisioning/     # 自動配置
-│           ├── dashboards/   # 儀表板定義
-│           │   ├── dashboard.yml
-│           │   └── system-monitoring.json
-│           └── datasources/  # 數據源配置
-│               └── prometheus.yml
-│
-├── model_repository/         # Triton 模型倉庫（共享卷）
-│
-├── docker-compose.yml        # Docker 服務編排
-├── startup.bat              # Windows 啟動腳本
-├── startup.sh               # Linux 啟動腳本
-└── README.md               # 專案說明文檔
-```
-
-### 重要文件說明
-
-| 文件 | 說明 |
-|------|------|
-| docker-compose.yml | 定義所有服務容器的配置和網路 |
-| backend/requirements.txt | 後端 Python 依賴套件列表 |
-| frontend/package.json | 前端 Node.js 依賴套件列表 |
-| monitoring/prometheus/prometheus.yml | Prometheus 監控目標配置 |
-| monitoring/grafana/provisioning/ | Grafana 自動化配置目錄 |
-
-## API文檔
-
-### 核心API端點
-
-- **模型管理**: `/api/models/`
-- **模型轉換**: `/api/conversion/`
-- **自動化管線**: `/api/benchmark/`
-- **推理服務**: `/api/inference/`
-- **Triton整合**: `/api/triton/`
-
-### 完整API文檔
-
-啟動系統後可訪問：http://localhost:8000/docs
-
-## 故障排除
-
-### 常見問題
-
-**Q: 啟動腳本執行失敗（Windows）**
-- 確認 Docker Desktop 已安裝並運行
-- 以管理員權限執行命令提示字元
-- 如果腳本有編碼問題，直接執行：
-  ```cmd
-  docker-compose build backend-base frontend-base
-  docker-compose up -d
-  ```
-
-**Q: Docker容器啟動失敗**
 ```bash
-# 檢查NVIDIA Container Toolkit安裝
-docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
-
-# 檢查Docker Compose配置
-docker-compose config
+git clone https://github.com/q86865511/AI-Deployment-Pipeline
+cd AI-Deployment-Pipeline
+cp .env.example .env
 ```
 
-**Q: Triton服務無法連接**
-```bash
-# 檢查Triton容器狀態
-docker-compose logs triton
+編輯 `.env`,**至少**填入 Grafana 管理員密碼(必填,否則 Compose 會直接報錯):
 
-# 測試Triton API
-curl http://localhost:8001/v2/health/ready
+```dotenv
+GF_SECURITY_ADMIN_PASSWORD=your-strong-password
+# 正式部署請把 CORS_ORIGINS 改成實際前端網域
+CORS_ORIGINS=http://localhost:3000
 ```
 
-**Q: 模型轉換失敗**
-- 檢查模型格式是否支援
-- 確認GPU記憶體充足
-- 查看後端日誌：`docker-compose logs backend`
+### 2. 啟動
 
-**Q: GPU 監控服務無法啟動**
-- 檢查是否安裝 NVIDIA Container Toolkit
-- 查看 GPU exporter 日誌：`docker-compose logs nvidia-gpu-exporter`
-- 如果沒有 GPU，可以在 docker-compose.yml 中註解掉 nvidia-gpu-exporter 服務
+**Windows**:
 
-**Q: Docker 容器無法使用 GPU**
-如果在 Linux 系統上遇到 GPU 無法被 Docker 容器識別的問題，請檢查並配置 Docker daemon：
-
-1. **編輯 Docker daemon 配置文件**：
-   ```bash
-   sudo nano /etc/docker/daemon.json
-   ```
-
-2. **添加 NVIDIA runtime 配置**：
-   ```json
-   {
-     "default-runtime": "nvidia",
-     "runtimes": {
-       "nvidia": {
-         "path": "nvidia-container-runtime",
-         "runtimeArgs": []
-       }
-     }
-   }
-   ```
-
-3. **重啟 Docker 服務**：
-   ```bash
-   sudo systemctl restart docker
-   ```
-
-4. **驗證 GPU 可用性**：
-   ```bash
-   docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
-   ```
-
-**注意事項**：
-- 確保已正確安裝 NVIDIA Container Toolkit
-- 如果配置文件已存在其他設定，請合併配置而非覆蓋
-- 重啟 Docker 後需要重新啟動系統容器
-
-**Q: CPU轉換GPU失敗或CUDA記憶體錯誤**
-當遇到以下情況時，建議重啟Docker服務來解決GPU相關問題：
-
-**常見錯誤訊息**：
-- `CUDA error: an illegal memory access was encountered`
-- `CUDA kernel errors might be asynchronously reported`
-- `CPU轉換失敗，GPU不支援`
-- 模型轉換顯示成功但實際失敗
-
-**解決方法**：
-
-**Windows系統**：
 ```cmd
-# 重啟Docker Desktop
-# 方法1: 通過GUI重啟
-# 右鍵點擊系統托盤的Docker圖標 → Restart
-
-# 方法2: 通過命令行重啟
-net stop com.docker.service
-net start com.docker.service
-
-# 重新啟動專案
 startup.bat
 ```
 
-**Linux系統**：
+**Linux**:
+
 ```bash
-# 停止當前容器
-docker-compose down
-
-# 重啟Docker服務
-sudo systemctl restart docker
-
-# 驗證GPU可用性
-docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
-
-# 重新啟動專案
-sudo ./startup.sh
+chmod +x startup.sh
+./startup.sh            # 完整啟動(會視需要重建基礎映像)
+./startup.sh --quick   # 快速啟動(只改程式碼、不動依賴時)
 ```
 
-**預防措施**：
-- 設定環境變數來增加轉換超時時間：
-  ```bash
-  # 設定轉換超時為60分鐘（預設30分鐘）
-  export CONVERSION_TIMEOUT_MINUTES=60
-  ```
-- 在docker-compose.yml中添加環境變數：
-  ```yaml
-  services:
-    backend:
-      environment:
-        - CONVERSION_TIMEOUT_MINUTES=60
-  ```
+或直接用 Docker Compose:
 
-**Q: 測試任務執行異常**
-- 檢查數據集格式是否正確
-- 確認GPU驅動版本相容性
-- 查看詳細錯誤信息
+```bash
+docker-compose build backend-base frontend-base
+docker-compose up -d
+```
 
-### 效能調優
+### 3. 服務端點
 
-**GPU記憶體優化**:
-- 降低批次大小
-- 使用FP16精度
-- 調整TensorRT工作空間大小
+| 服務 | URL | 說明 |
+|------|-----|------|
+| 主介面 | http://localhost:3000 | React 前端 |
+| API 服務 | http://localhost:8000 | FastAPI 後端 |
+| API 文檔 | http://localhost:8000/docs | Swagger UI |
+| Grafana 監控 | http://localhost:3001 | 帳號 `admin`,密碼為 `.env` 中設定的 `GF_SECURITY_ADMIN_PASSWORD` |
+| Prometheus | http://localhost:9090 | 指標查詢介面 |
+| Triton(HTTP / gRPC / Metrics) | 8001 / 8002 / 8003 | 推論與指標端點 |
 
-**推理效能優化**:
-- 啟用動態批次處理
-- 配置模型實例數量
-- 調整輸入數據預處理
+> 核心 API:`/api/models`、`/api/conversion`、`/api/inference`、`/api/benchmark`、`/api/triton`。
 
-## 技術棧
+## 🧪 測試
 
-### 後端技術
-- **FastAPI**: 高性能異步Web框架
-- **PyTorch**: 深度學習框架
-- **ONNX**: 開放神經網路交換格式
-- **TensorRT**: NVIDIA推理優化引擎
-- **Ultralytics**: YOLOv8官方實作
+完整後端依賴(CUDA / TensorRT / Triton client)無法在一般 CI runner 上安裝,因此 CI(`.github/workflows/ci.yml`)採用**輕量守門**策略,在每次 push 到 `main` 與所有 PR 上執行:
 
-### 前端技術
-- **React 18**: 現代化前端框架
-- **Ant Design 5**: 企業級UI組件庫
-- **ECharts**: 數據可視化圖表庫
-- **Axios**: HTTP客戶端
+- **後端**:`python -m compileall`(語法檢查)＋ Ruff 真實錯誤子集(`E9, F63, F7, F82`,設定見 `backend/ruff.toml`)。
+- **前端**:`npm ci` ＋ `npm run build`(CRA production build)。
 
-### 基礎設施
-- **Docker**: 容器化部署
-- **NVIDIA Triton**: 推理服務器
-- **Docker Compose**: 服務編排
+本機重現:
 
+```bash
+# 後端守門
+cd backend
+python -m compileall -q app
+pip install ruff==0.15.12 && ruff check app/
 
-## 貢獻指南
+# 前端 build
+cd frontend
+npm ci
+CI=false npm run build
+```
 
-歡迎提交Issue和Pull Request來改進本專案。請確保：
+> 後端另含 `pytest` 依賴,完整單元測試需在具 GPU / TensorRT 的環境執行,目前未納入 CI。
 
-1. 遵循現有代碼風格
-2. 添加適當的測試用例
-3. 更新相關文檔
-4. 提供詳細的變更說明
+## ⚠️ 已知限制
 
-## 聯絡資訊
+- **硬性依賴 NVIDIA GPU**:轉換、推論與 GPU 監控皆需 NVIDIA GPU + CUDA + TensorRT,純 CPU 環境無法完整運作。
+- **CI 僅為輕量守門**:完整依賴無法在公開 CI 安裝,故 CI 僅做前端 build 與後端語法 / lint 檢查,不涵蓋端到端整合或 GPU 路徑。
+- **前端 lint 與後端 lint 尚未全面清理**:CRA build 以 `CI=false` 容忍既有 ESLint warning;Ruff 目前只擋真實錯誤子集,風格問題待後續清理。
+- **部分巨型服務檔待重構**:`inference_service.py`(約 1.7k 行)、`test_manager.py`、`conversion_service.py` 等檔案偏大,後續會拆分以利維護與測試。
+- **資料集約束**:標準化測試案例要求驗證集圖片數可被所有批次大小整除(例如 2304 張),否則部分組合無法整批推論。
 
-如有任何問題或建議，請通過以下方式聯絡：
+## 📄 授權
 
-- 專案Issues: [GitHub Issues](https://github.com/q86865511/AI-Deployment-Pipeline/issues)
-- 技術支援: q86865511@gmail.com 
+本專案採用 MIT 授權,詳見 [LICENSE](LICENSE)。
