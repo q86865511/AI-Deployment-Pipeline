@@ -2,6 +2,8 @@
 
 > YOLO 模型自動化「轉換 → 部署 → 評測」平台：一鍵把 PyTorch 權重壓成 TensorRT 引擎、部署到 Triton，並產出多組態效能基準與即時 GPU 監控。
 
+<p align="center"><img src="docs/cover.png" alt="AI 模型部署與監控平台 — 封面" width="100%"></p>
+
 [![CI](https://github.com/q86865511/AI-Deployment-Pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/q86865511/AI-Deployment-Pipeline/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104-009688?logo=fastapi&logoColor=white)
