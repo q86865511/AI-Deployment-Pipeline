@@ -25,7 +25,7 @@
 組成:
 
 - **後端**:Python + FastAPI 非同步 API,負責轉換、推論、測試管理與 Triton 整合。
-- **前端**:Create React App + Ant Design,搭配 ECharts / Recharts 做結果可視化。
+- **前端**:Vite + React 18 + Ant Design,搭配 ECharts 做結果可視化。
 - **推論服務**:NVIDIA Triton Inference Server,以 explicit 模式動態掛載 / 卸載模型。
 - **監控**:Prometheus 收集指標、Grafana 呈現儀表板,涵蓋 CPU / 記憶體 / GPU 利用率 / VRAM 與 Triton 推論指標。
 - **編排**:Docker Compose,後端、Triton、GPU exporter 皆掛載 NVIDIA GPU。
@@ -42,6 +42,13 @@
   - **資料集 ZIP 安全解壓**:`safe_extract_zip()` 逐一驗證每個成員解壓後仍落在目標目錄內,防止 zip-slip 路徑穿越。
   - **Grafana 管理員密碼改為必填環境變數**(`GF_SECURITY_ADMIN_PASSWORD`),未設定時 Docker Compose 直接報錯,杜絕預設弱密碼。
   - **移除未使用的 flask 依賴**,縮小依賴面與攻擊面。
+  - **前端依賴漏洞清零 ＋ 工具鏈現代化**:前端原為 Create React App(`react-scripts@5.0.1`),其依賴鏈帶有 65 個已知漏洞(含 3 critical、32 high)。已**遷移至 Vite**移除整條 `react-scripts` 鏈,並升級 `jspdf`、`axios`、`react-router-dom`、將 `xlsx` 換為 SheetJS 官方修正版,移除未使用的 `@ant-design/plots` / `recharts`。`npm audit --omit=dev` 現為 **0 漏洞**。
+
+### 前端依賴安全與正式部署注意事項
+
+- **依賴稽核**:前端 `npm audit --omit=dev --audit-level=moderate` 維持 0 critical / 0 high;升級依賴後請以 `npm run build` 與 `npm test`(Vitest)回歸。
+- **CORS**:後端 `CORS_ORIGINS` 為逗號分隔的允許來源清單,正式部署務必改為實際前端網域,勿用萬用字元 `*`。
+- **API 位址**:前端透過建置期環境變數 `VITE_API_URL` 注入後端位址(`.env` 中設定);未設定時退回 `http://localhost:8000`。
 
 ## 🏗️ 架構
 
@@ -50,7 +57,7 @@
 ```mermaid
 flowchart LR
     subgraph Client["瀏覽器"]
-        FE["前端<br/>CRA + Ant Design<br/>ECharts / Recharts"]
+        FE["前端<br/>Vite + React + Ant Design<br/>ECharts"]
     end
 
     subgraph API["後端 FastAPI (/api)"]
@@ -157,7 +164,7 @@ docker-compose up -d
 
 - **後端(語法 / lint)**:`python -m compileall`(語法檢查)＋ Ruff 真實錯誤子集(`E9, F63, F7, F82`,設定見 `backend/ruff.toml`)。
 - **後端(單元測試)**:`pytest`——純邏輯模組(`app/services/{model_tasks,comparison,combinations}.py`)的 characterization 測試,只依賴 `pydantic`,免 GPU / TensorRT。
-- **前端**:`npm ci` ＋ `npm run build`(CRA production build);純函式 util(`src/utils/*`)另有 `react-scripts test`(jest)測試。
+- **前端**:`npm ci` ＋ `npm test`(Vitest 單元測試)＋ `npm run build`(Vite production build);純函式 util(`src/utils/*`)以 Vitest 做 characterization 測試。
 
 本機重現:
 
@@ -171,8 +178,8 @@ pip install pytest pydantic==2.4.2 && python -m pytest tests/ -q
 # 前端 build + util 測試
 cd frontend
 npm ci
-CI=false npm run build
-CI=true npx react-scripts test --watchAll=false src/utils
+npm test          # Vitest 單元測試
+npm run build     # Vite production build
 ```
 
 > 純邏輯單元測試(免 GPU)已納入 CI;需 GPU / TensorRT 的端到端推論 / 轉換整合測試仍須在具 GPU 的環境手動執行,未納入公開 CI。
@@ -180,8 +187,9 @@ CI=true npx react-scripts test --watchAll=false src/utils
 ## ⚠️ 已知限制
 
 - **硬性依賴 NVIDIA GPU**:轉換、推論與 GPU 監控皆需 NVIDIA GPU + CUDA + TensorRT,純 CPU 環境無法完整運作。
-- **CI 為輕量守門 ＋ 純邏輯單元測試**:完整依賴無法在公開 CI 安裝,故 CI 做前端 build＋jest、後端語法 / lint＋純邏輯 pytest;不涵蓋需 GPU 的端到端整合或推論路徑。
-- **前端 lint 與後端 lint 尚未全面清理**:CRA build 以 `CI=false` 容忍既有 ESLint warning;Ruff 目前只擋真實錯誤子集,風格問題待後續清理。
+- **CI 為輕量守門 ＋ 純邏輯單元測試**:完整依賴無法在公開 CI 安裝,故 CI 做前端 Vitest＋Vite build、後端語法 / lint＋純邏輯 pytest;不涵蓋需 GPU 的端到端整合或推論路徑。
+- **後端 lint 尚未全面清理**:Ruff 目前只擋真實錯誤子集,風格問題待後續清理。
+- **前端 bundle 尚未切分**:主 chunk 約 3.3MB(antd / echarts / xlsx / jspdf 同包),功能正常但首次載入偏大,後續可用動態 `import()` 或 `manualChunks` 優化。
 - **部分巨型服務檔待重構(進行中)**:已將可測的純邏輯(task 對應、效能比較、組合生成)抽成獨立模組並補單元測試;`inference_service.py`(約 1.7k 行)、`test_manager.py`、`conversion_service.py` 的 GPU / subprocess 重型程式碼仍偏大,需在具 GPU 的環境能行為驗證後再安全拆分。
 - **資料集約束**:標準化測試案例要求驗證集圖片數可被所有批次大小整除(例如 2304 張),否則部分組合無法整批推論。
 
