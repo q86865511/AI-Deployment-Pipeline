@@ -18,7 +18,6 @@ import {
 import { 
   ReloadOutlined,
   CloudDownloadOutlined,
-  MemoryIcon,
   DashboardOutlined,
   BarChartOutlined,
   ExclamationCircleOutlined,
@@ -26,7 +25,7 @@ import {
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const DeploymentMonitorPage = () => {
   const [loadedModels, setLoadedModels] = useState([]);
