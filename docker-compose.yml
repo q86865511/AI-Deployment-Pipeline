@@ -49,6 +49,8 @@ services:
       - TRITON_URL=http://triton:8000
       # 允許的前端來源（逗號分隔），預設僅本機；正式部署請在 .env 覆寫
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      # 單一組態的效能量測重複次數上限（見 README「實驗方法」）
+      - MAX_BENCHMARK_ITERATIONS=${MAX_BENCHMARK_ITERATIONS:-10}
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level=debug
     depends_on:
       - backend-base
@@ -64,6 +66,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # Vite 只認 VITE_ 前綴且於建置期注入；同時以 environment 傳入供 dev server 使用。
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
@@ -72,7 +77,7 @@ services:
     mem_limit: 16g
     shm_size: '8gb'
     environment:
-      - REACT_APP_API_URL=http://localhost:8000
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
     depends_on:
       - frontend-base
       - backend 

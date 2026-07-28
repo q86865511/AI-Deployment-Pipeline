@@ -8,6 +8,7 @@ import uuid
 import zipfile
 
 from app.services.test_manager import TestManager
+from app.utils.path_safety import sanitize_filename, is_within
 
 router = APIRouter()
 test_manager = TestManager()
@@ -71,12 +72,14 @@ async def upload_dataset(
             raise HTTPException(status_code=400, detail="數據集類型必須為 object 或 pose")
             
         # 檢查文件類型
-        if not file.filename.endswith('.zip'):
+        if not file.filename or not file.filename.endswith('.zip'):
             raise HTTPException(status_code=400, detail="只接受ZIP格式的數據集文件")
-        
-        # 保存原始文件名
-        original_filename = file.filename
-        
+
+        # 清洗上傳檔名：去掉目錄成分並套用字元白名單，防止 "../" 之類的路徑穿越
+        original_filename = sanitize_filename(file.filename, default="dataset.zip")
+        if not original_filename.endswith('.zip'):
+            raise HTTPException(status_code=400, detail="只接受ZIP格式的數據集文件")
+
         # 生成唯一ID和目錄
         dataset_id = str(uuid.uuid4())
         dataset_short_id = dataset_id.split('-')[0]
@@ -91,9 +94,14 @@ async def upload_dataset(
         # 目標目錄名稱
         dataset_dir_name = f"{original_filename}_{dataset_short_id}"
         dataset_dir = os.path.join(datasets_dir, dataset_dir_name)
-        
+
         # 保存上傳的ZIP文件
         zip_path = os.path.join(temp_dir, original_filename)
+
+        # 落地前再以 commonpath 複核一次：清洗後的路徑必須仍在暫存與資料集目錄內
+        if not is_within(temp_dir, zip_path) or not is_within(datasets_dir, dataset_dir):
+            raise HTTPException(status_code=400, detail="數據集檔名不安全，已拒絕上傳")
+
         with open(zip_path, "wb") as f:
             contents = await file.read()
             f.write(contents)
@@ -375,7 +383,9 @@ async def create_test_task(
         batch_sizes: 批次大小列表，以逗號分隔
         precisions: 精度選項列表 ['fp32', 'fp16']
         image_size: 圖像尺寸
-        iterations: 迭代次數
+        iterations: 每個組態的效能量測重複次數；實際執行次數會被上限
+            `MAX_BENCHMARK_ITERATIONS`（預設 10，可用同名環境變數調整）截斷，
+            結果檔的 `iterations` 記錄實際執行次數，`requested_iterations` 記錄本欄位的值
         dataset_id: 數據集ID (必需)
         model_type: 模型類型 ['object', 'pose']
         custom_params: 自定義參數JSON字符串 (可選)

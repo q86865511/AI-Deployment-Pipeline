@@ -7,7 +7,7 @@ import {
 import { 
   ArrowLeftOutlined, DownloadOutlined, AreaChartOutlined
 } from '@ant-design/icons';
-import axios from 'axios';
+import api, { API_BASE_URL } from '../api/client';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -36,7 +36,7 @@ const TestResultsPage = () => {
   const fetchAvailableTasks = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:8000/api/benchmark/tasks');
+      const response = await api.get('/api/benchmark/tasks');
       const tasks = response.data.tasks || [];
       const completedTasks = tasks
         .filter(task => task.status === 'completed')
@@ -58,7 +58,7 @@ const TestResultsPage = () => {
     
     setLoading(true);
     try {
-      const response = await axios.get(`http://localhost:8000/api/benchmark/results/${taskId}`);
+      const response = await api.get(`/api/benchmark/results/${taskId}`);
       setTestResults(response.data);
       setError(null);
     } catch (err) {
@@ -172,7 +172,7 @@ const TestResultsPage = () => {
             </Button>
             <Button 
               icon={<DownloadOutlined />}
-              onClick={() => window.open(`http://localhost:8000/api/benchmark/download-results/${selectedTaskId}`)}
+              onClick={() => window.open(`${API_BASE_URL}/api/benchmark/download-results/${selectedTaskId}`)}
             >
               下載完整結果
             </Button>

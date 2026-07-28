@@ -13,7 +13,7 @@
   - prometheus (9090/tcp)
 
 ### Grafana (http://localhost:3001)
-- 登入資訊：用戶名 `admin`，密碼 `admin`
+- 登入資訊：用戶名 `admin`，密碼為 `.env` 中設定的 `GF_SECURITY_ADMIN_PASSWORD`
 - 檢查 Data Sources 是否正確連接到 Prometheus
 - 打開 "系統資源監控" 儀表板
 - 確認四個面板都有數據：

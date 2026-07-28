@@ -24,6 +24,30 @@ from app.models import ModelInfo, ModelPerformance, PrecisionType, ModelType
 from app.services.model_tasks import task_from_model_type
 from app.services.comparison import generate_comparison as compute_comparison
 
+# 單一組態的效能量測重複次數上限：避免 12 組矩陣中的單一組合長時間佔用 GPU。
+# 使用者若填入更大的值會被截到此上限（會印出警告，結果檔記錄實際執行次數）。
+# 可用環境變數 MAX_BENCHMARK_ITERATIONS 調整。
+MAX_BENCHMARK_ITERATIONS = int(os.environ.get("MAX_BENCHMARK_ITERATIONS", "10"))
+
+
+def _resolve_iterations(requested: int) -> int:
+    """把使用者請求的迭代次數收斂到上限，並在被截斷時明確告知。"""
+    effective = max(1, min(int(requested), MAX_BENCHMARK_ITERATIONS))
+    if effective < requested:
+        print(
+            f"警告: 請求的迭代次數 {requested} 超過上限 "
+            f"MAX_BENCHMARK_ITERATIONS={MAX_BENCHMARK_ITERATIONS}，實際執行 {effective} 次"
+        )
+    return effective
+
+
+def _sample_std(values: List[float]) -> float:
+    """樣本標準差（ddof=1）；樣本數不足 2 時回傳 0.0 避免 nan。"""
+    if len(values) < 2:
+        return 0.0
+    return float(np.std(values, ddof=1))
+
+
 def _get_gpu_memory_usage() -> float:
     """獲取GPU記憶體使用量 (MB) - 多種備用方法"""
     try:
@@ -1285,10 +1309,14 @@ class InferenceService:
     def _get_dataset_path(self, dataset_id: str = None) -> str:
         """根據資料集ID獲取資料集路徑"""
         if not dataset_id:
-            # 使用默認資料集
+            # 使用默認資料集；與下方正常分支一致，目錄存在還不夠，必須真的含有圖像檔，
+            # 否則回傳 None 讓呼叫端退回模擬資料，而不是稍後在 images[0] 拋 IndexError
             default_path = os.path.join(os.getcwd(), "data", "datasets", "coco.zip_a8bedb81", "images", "val2017")
-            if os.path.exists(default_path):
-                return default_path
+            if os.path.isdir(default_path):
+                images = [f for f in os.listdir(default_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
+                if images:
+                    return default_path
+                print(f"警告: 預設資料集目錄存在但沒有圖像檔，改用模擬資料: {default_path}")
             return None
         
         # 從 datasets.json 獲取資料集資訊
@@ -1410,21 +1438,22 @@ class InferenceService:
             else:
                 print(f"使用資料集路徑: {test_data_path}")
                 # 獲取第一張圖像作為備用
-                images = [f for f in os.listdir(test_data_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
+                images = sorted(f for f in os.listdir(test_data_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')))
                 if images:
                     test_image = os.path.join(test_data_path, images[0])
                 else:
                     test_image = np.random.randint(0, 255, (640, 640, 3), dtype=np.uint8)
             
             # 使用執行緒池運行推論測試（非阻塞）
+            effective_iterations = _resolve_iterations(iterations)
             benchmark_func = partial(
-                self._run_engine_benchmark, 
-                model.path, 
-                model.type, 
-                test_data_path if test_data_path else test_image, 
-                device, 
-                batch_size, 
-                min(iterations, 10)
+                self._run_engine_benchmark,
+                model.path,
+                model.type,
+                test_data_path if test_data_path else test_image,
+                device,
+                batch_size,
+                effective_iterations
             )
             benchmark_results = await asyncio.get_event_loop().run_in_executor(
                 self.executor, benchmark_func
@@ -1435,7 +1464,7 @@ class InferenceService:
             
             # 計算統計數據 - 轉換為單次請求的平均時間
             avg_inference_time = float(np.mean(inference_times)) / batch_size  # 除以batch_size得到單次請求時間
-            std_inference_time = float(np.std(inference_times)) / batch_size
+            std_inference_time = _sample_std(inference_times) / batch_size  # 樣本標準差（ddof=1）
             min_inference_time = float(np.min(inference_times)) / batch_size
             max_inference_time = float(np.max(inference_times)) / batch_size
             avg_throughput = float(np.mean(throughputs))
@@ -1444,7 +1473,9 @@ class InferenceService:
                 "model_id": model.id,
                 "model_name": model.name,
                 "batch_size": batch_size,
-                "iterations": len(inference_times),
+                "iterations": len(inference_times),  # 實際執行次數
+                "requested_iterations": iterations,  # 使用者請求次數（可能被上限截斷）
+                "max_iterations": MAX_BENCHMARK_ITERATIONS,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "avg_inference_time_ms": avg_inference_time,
                 "std_inference_time_ms": std_inference_time,
@@ -1478,21 +1509,22 @@ class InferenceService:
             else:
                 print(f"使用資料集路徑: {test_data_path}")
                 # 獲取第一張圖像作為備用
-                images = [f for f in os.listdir(test_data_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
+                images = sorted(f for f in os.listdir(test_data_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')))
                 if images:
                     test_image = os.path.join(test_data_path, images[0])
                 else:
                     test_image = np.random.randint(0, 255, (640, 640, 3), dtype=np.uint8)
             
             # 使用執行緒池運行推論測試（非阻塞）
+            effective_iterations = _resolve_iterations(iterations)
             benchmark_func = partial(
-                self._run_general_benchmark, 
-                model.path, 
-                model.type, 
-                test_data_path if test_data_path else test_image, 
-                device, 
-                batch_size, 
-                min(iterations, 10)
+                self._run_general_benchmark,
+                model.path,
+                model.type,
+                test_data_path if test_data_path else test_image,
+                device,
+                batch_size,
+                effective_iterations
             )
             benchmark_results = await asyncio.get_event_loop().run_in_executor(
                 self.executor, benchmark_func
@@ -1503,7 +1535,7 @@ class InferenceService:
             
             # 計算統計數據 - 轉換為單次請求的平均時間
             avg_inference_time = float(np.mean(inference_times)) / batch_size  # 除以batch_size得到單次請求時間
-            std_inference_time = float(np.std(inference_times)) / batch_size
+            std_inference_time = _sample_std(inference_times) / batch_size  # 樣本標準差（ddof=1）
             min_inference_time = float(np.min(inference_times)) / batch_size
             max_inference_time = float(np.max(inference_times)) / batch_size
             avg_throughput = float(np.mean(throughputs))
@@ -1512,7 +1544,9 @@ class InferenceService:
                 "model_id": model.id,
                 "model_name": model.name,
                 "batch_size": batch_size,
-                "iterations": len(inference_times),
+                "iterations": len(inference_times),  # 實際執行次數
+                "requested_iterations": iterations,  # 使用者請求次數（可能被上限截斷）
+                "max_iterations": MAX_BENCHMARK_ITERATIONS,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "avg_inference_time_ms": avg_inference_time,
                 "std_inference_time_ms": std_inference_time,
@@ -1550,7 +1584,7 @@ class InferenceService:
                 # 準備測試數據
                 if isinstance(test_data_path, str) and os.path.isdir(test_data_path):
                     # 如果是目錄，獲取多張圖片進行batch測試
-                    images = [f for f in os.listdir(test_data_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
+                    images = sorted(f for f in os.listdir(test_data_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')))
                     if len(images) >= batch_size:
                         test_images = [os.path.join(test_data_path, images[i]) for i in range(batch_size)]
                     else:
@@ -1640,7 +1674,7 @@ class InferenceService:
             # 準備測試數據
             if isinstance(test_data_path, str) and os.path.isdir(test_data_path):
                 # 如果是目錄，獲取多張圖片進行batch測試
-                images = [f for f in os.listdir(test_data_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))]
+                images = sorted(f for f in os.listdir(test_data_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')))
                 if len(images) >= batch_size:
                     test_images = [os.path.join(test_data_path, images[i]) for i in range(batch_size)]
                 else:

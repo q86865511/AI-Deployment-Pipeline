@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Form, Select, Button, Table, Progress, Tag, message, Alert, Tooltip, Input } from 'antd';
 import { SyncOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import api from '../api/client';
 
 const { Option } = Select;
 
@@ -62,7 +62,7 @@ const ConversionPage = () => {
   const fetchModels = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:8000/api/models/');
+      const response = await api.get('/api/models/');
       setModels(response.data.models);
       
       // 創建模型ID到模型名稱的映射
@@ -83,7 +83,7 @@ const ConversionPage = () => {
   const fetchJobs = async () => {
     setJobsLoading(true);
     try {
-      const response = await axios.get('http://localhost:8000/api/conversion/');
+      const response = await api.get('/api/conversion/');
       setJobs(response.data.jobs);
       
       // 檢查是否有處理中的任務
@@ -101,7 +101,7 @@ const ConversionPage = () => {
   const refreshModelRepository = async () => {
     try {
       console.log('開始刷新模型庫...');
-      const response = await axios.get('http://localhost:8000/api/models/refresh');
+      const response = await api.get('/api/models/refresh');
       console.log('模型庫刷新成功，返回：', response.data);
       // 刷新模型列表
       fetchModels();
@@ -115,7 +115,7 @@ const ConversionPage = () => {
   const fetchSystemState = async () => {
     setSystemStateLoading(true);
     try {
-      const response = await axios.get('http://localhost:8000/api/benchmark/system-state');
+      const response = await api.get('/api/benchmark/system-state');
       setSystemState(response.data);
     } catch (error) {
       console.error('獲取系統狀態失敗:', error);
@@ -191,7 +191,7 @@ const ConversionPage = () => {
       
       console.log('選擇的模型:', selectedModel);
       
-      const response = await axios.post('http://localhost:8000/api/conversion/', {
+      const response = await api.post('/api/conversion/', {
         source_model_id: values.model_id,
         target_format: values.target_format,
         precision: values.precision,
@@ -359,7 +359,7 @@ const ConversionPage = () => {
     if (!confirm) return;
     
     try {
-      const response = await axios.delete(`http://localhost:8000/api/conversion/${jobId}`);
+      const response = await api.delete(`/api/conversion/${jobId}`);
       message.success('轉換任務已成功刪除');
       
       // 刷新轉換任務列表

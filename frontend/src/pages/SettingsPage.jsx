@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Card, Form, Input, Button, Select, Divider, Switch, message } from 'antd';
+import { API_BASE_URL } from '../api/client';
 
 const { Option } = Select;
 
@@ -25,7 +26,7 @@ const SettingsPage = () => {
           layout="vertical"
           onFinish={handleSave}
           initialValues={{
-            api_url: 'http://localhost:8000',
+            api_url: API_BASE_URL,
             default_precision: 'fp16',
             default_batch_size: '1',
             default_workspace: '4',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Typography, Card, Row, Col, Statistic } from 'antd';
 import { DatabaseOutlined, SwapOutlined, LineChartOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import api from '../api/client';
 
 const { Title, Paragraph } = Typography;
 
@@ -19,13 +19,13 @@ const HomePage = () => {
   const fetchStatistics = async () => {
     try {
       // 獲取模型數量
-      const modelsResponse = await axios.get('http://localhost:8000/api/models/');
+      const modelsResponse = await api.get('/api/models/');
       
       // 獲取轉換任務數量
-      const conversionsResponse = await axios.get('http://localhost:8000/api/conversion/');
+      const conversionsResponse = await api.get('/api/conversion/');
       
       // 獲取自動化管線任務數量
-      const pipelineResponse = await axios.get('http://localhost:8000/api/benchmark/tasks');
+      const pipelineResponse = await api.get('/api/benchmark/tasks');
       
       setStats({
         modelCount: modelsResponse.data.total || 0,

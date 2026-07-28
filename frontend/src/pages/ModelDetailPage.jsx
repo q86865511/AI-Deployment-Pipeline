@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, Descriptions, Button, Spin, message } from 'antd';
 import { DownloadOutlined, DeleteOutlined, SwapOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import api, { API_BASE_URL } from '../api/client';
 
 const ModelDetailPage = () => {
   const { id } = useParams();
@@ -15,7 +15,7 @@ const ModelDetailPage = () => {
 
   const fetchModelDetails = async () => {
     try {
-      const response = await axios.get(`http://localhost:8000/api/models/${id}`);
+      const response = await api.get(`/api/models/${id}`);
       setModel(response.data);
     } catch (error) {
       console.error('獲取模型詳情失敗:', error);
@@ -52,7 +52,7 @@ const ModelDetailPage = () => {
             type="primary"
             icon={<DownloadOutlined />}
             style={{ marginRight: 8 }}
-            onClick={() => window.open(`http://localhost:8000/api/models/${id}/download`)}
+            onClick={() => window.open(`${API_BASE_URL}/api/models/${id}/download`)}
           >
             下載
           </Button>
@@ -69,7 +69,7 @@ const ModelDetailPage = () => {
             icon={<DeleteOutlined />}
             onClick={async () => {
               try {
-                await axios.delete(`http://localhost:8000/api/models/${id}`);
+                await api.delete(`/api/models/${id}`);
                 message.success('刪除模型成功');
                 window.location.href = '/models';
               } catch (error) {

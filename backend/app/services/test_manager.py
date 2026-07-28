@@ -136,7 +136,7 @@ class TestManager:
             batch_sizes: 批次大小列表
             precisions: 精度選項列表
             image_size: 圖像尺寸
-            iterations: 迭代次數
+            iterations: 每組態的量測重複次數（實際執行次數受 MAX_BENCHMARK_ITERATIONS 上限截斷）
             dataset_id: 數據集ID
             model_type: 模型類型，'object'或'pose'
             custom_params: 自定義參數
@@ -652,7 +652,10 @@ class TestManager:
                         "batch_size": batch_size,
                         "precision": combination["precision"],
                         "image_size": image_size,
-                        "iterations": iterations,
+                        # 外層記錄實際執行次數（與 inference_results.iterations 一致），
+                        # 使用者請求的次數另存 requested_iterations，避免兩層數字互相矛盾
+                        "iterations": combination["inference_results"].get("iterations", iterations),
+                        "requested_iterations": iterations,
                         "validation_results": combination.get("validation_results"),
                         "inference_results": combination["inference_results"],
                         "timestamp": datetime.now(timezone(timedelta(hours=8))).isoformat()

@@ -10,7 +10,7 @@ import {
   CloudDownloadOutlined,
   LoadingOutlined
 } from '@ant-design/icons';
-import axios from 'axios';
+import api, { API_BASE_URL } from '../api/client';
 
 const { Option } = Select;
 
@@ -29,7 +29,7 @@ const ModelsPage = () => {
     const refreshAndFetch = async () => {
       try {
         // 先嘗試刷新模型庫
-        await axios.get('http://localhost:8000/api/models/refresh');
+        await api.get('/api/models/refresh');
         console.log('模型庫刷新成功');
         // 然後獲取最新的模型列表
         await fetchModels();
@@ -55,7 +55,7 @@ const ModelsPage = () => {
   const handleVisibilityChange = () => {
     if (document.visibilityState === 'visible') {
       // 當頁面再次變為可見時，刷新模型庫然後獲取模型列表
-      axios.get('http://localhost:8000/api/models/refresh')
+      api.get('/api/models/refresh')
         .then(() => fetchModels())
         .catch(() => fetchModels());
     }
@@ -64,7 +64,7 @@ const ModelsPage = () => {
   const fetchModels = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:8000/api/models/');
+      const response = await api.get('/api/models/');
       const rawModels = response.data.models;
       
       // 過濾掉重複模型（相同triton_model_dir路徑的模型）
@@ -99,7 +99,7 @@ const ModelsPage = () => {
         filteredModels.map(async (model) => {
           if (model.metadata && model.metadata.triton_model_name && model.metadata.is_trt_model) {
             try {
-              const statusResponse = await axios.get(`http://localhost:8000/api/triton/models/${model.id}/status`);
+              const statusResponse = await api.get(`/api/triton/models/${model.id}/status`);
               return {
                 ...model,
                 tritonStatus: statusResponse.data
@@ -127,7 +127,7 @@ const ModelsPage = () => {
 
   const handleDelete = async (modelId) => {
     try {
-      await axios.delete(`http://localhost:8000/api/models/${modelId}`);
+      await api.delete(`/api/models/${modelId}`);
       message.success('刪除模型成功');
       fetchModels();
     } catch (error) {
@@ -178,7 +178,7 @@ const ModelsPage = () => {
           processingMessage();
           const torchscriptMessage = message.loading('正在轉換PyTorch模型為TorchScript，請稍候...', 0);
           
-          const response = await axios.post('http://localhost:8000/api/models/', formData, {
+          const response = await api.post('/api/models/', formData, {
             headers: {
               'Content-Type': 'multipart/form-data',
             },
@@ -187,7 +187,7 @@ const ModelsPage = () => {
           
           torchscriptMessage();
         } else {
-      const response = await axios.post('http://localhost:8000/api/models/', formData, {
+      const response = await api.post('/api/models/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -233,7 +233,7 @@ const ModelsPage = () => {
   const handleLoadModel = async (modelId, modelName) => {
     setLoadingModels(prev => new Set([...prev, modelId]));
     try {
-      const response = await axios.post(`http://localhost:8000/api/triton/models/${modelId}/load`);
+      const response = await api.post(`/api/triton/models/${modelId}/load`);
       if (response.data.success) {
         message.success(`模型 ${modelName} 掛載成功`);
         // 刷新模型狀態
@@ -257,7 +257,7 @@ const ModelsPage = () => {
   const handleUnloadModel = async (modelId, modelName) => {
     setLoadingModels(prev => new Set([...prev, modelId]));
     try {
-      const response = await axios.post(`http://localhost:8000/api/triton/models/${modelId}/unload`);
+      const response = await api.post(`/api/triton/models/${modelId}/unload`);
       if (response.data.success) {
         message.success(`模型 ${modelName} 卸載成功`);
         // 刷新模型狀態
@@ -396,7 +396,7 @@ const ModelsPage = () => {
           <Button 
             type="link" 
             size="small"
-            onClick={() => window.open(`http://localhost:8000/api/models/${record.id}/download`)}
+            onClick={() => window.open(`${API_BASE_URL}/api/models/${record.id}/download`)}
           >
             下載
           </Button>

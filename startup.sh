@@ -113,7 +113,7 @@ echo "[信息] 系統已啟動："
 echo "- 前端界面：http://localhost:3000"
 echo "- 後端API：http://localhost:8000"
 echo "- API文檔：http://localhost:8000/docs"
-echo "- 系統監控：http://localhost:3001 (Grafana儀表板，用戶名/密碼: admin/admin)"
+echo "- 系統監控：http://localhost:3001 (Grafana儀表板，用戶名 admin，密碼為 .env 中設定的 GF_SECURITY_ADMIN_PASSWORD)"
 echo ""
 echo "[信息] 查看服務日誌："
 echo "- 查看所有日誌: docker-compose logs -f"
@@ -124,7 +124,7 @@ echo "[信息] 使用提示："
 echo "- 快速啟動（只修改程式碼時）: ./startup.sh --quick 或 ./startup.sh -q"
 echo "- 完整啟動（修改依賴時）: ./startup.sh"
 echo ""
-echo "[信息] 按 Ctrl+C 停止服務，或在新終端執行 ./stop.sh"
+echo "[信息] 按 Ctrl+C 停止服務，或在新終端執行 docker-compose down"
 
 # 等待用戶中斷
 trap 'echo; echo "[信息] 接收到停止信號，正在停止系統服務..."; docker-compose down; echo "[信息] 操作完成"; exit 0' INT

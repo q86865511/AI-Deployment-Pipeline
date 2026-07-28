@@ -23,9 +23,9 @@ import {
   ExclamationCircleOutlined,
   LineChartOutlined
 } from '@ant-design/icons';
+import { API_BASE_URL } from '../api/client';
 
 const { Title, Text } = Typography;
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const DeploymentMonitorPage = () => {
   const [loadedModels, setLoadedModels] = useState([]);

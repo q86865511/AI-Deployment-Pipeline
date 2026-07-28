@@ -4,6 +4,7 @@ import uuid
 from typing import List, Dict, Optional, Any
 from datetime import datetime, timezone, timedelta
 from app.models import ModelInfo, ModelType, ModelFormat
+from app.utils.path_safety import sanitize_filename, is_within
 
 class ModelService:
     """
@@ -406,12 +407,17 @@ class ModelService:
         """從上傳文件創建模型"""
         # 生成唯一ID
         model_id = str(uuid.uuid4())
-        
+
         # 確定模型格式
         model_format = self._determine_model_format(file_path)
-        
+
+        # 模型名稱來自使用者輸入，先清洗再組目錄，落地前以 commonpath 複核（縱深防禦）
+        name = sanitize_filename(name, default=f"model_{model_id.split('-')[0]}")
+
         # 創建模型目錄
         model_dir = os.path.join(self.model_repository_path, name)
+        if not is_within(self.model_repository_path, model_dir):
+            raise ValueError(f"模型名稱不安全，已拒絕建立目錄: {name}")
         version_dir = os.path.join(model_dir, "1")
         os.makedirs(version_dir, exist_ok=True)
         

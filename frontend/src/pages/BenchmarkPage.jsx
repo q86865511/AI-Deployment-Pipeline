@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Select, Button, Table, Form, Input, Tag, Alert, Progress, Popconfirm, Space, Statistic, Row, Col, Typography, Upload, Modal, message, Divider, Radio, Empty, Tooltip } from 'antd';
 import { DeleteOutlined, SyncOutlined, AreaChartOutlined, UploadOutlined, InboxOutlined, DownloadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import api, { API_BASE_URL } from '../api/client';
 import { calculateActualProgress, getStatusColor, formatDateTime, stepNameMap, statusNameMap } from '../utils/benchmarkFormat';
 
 const { Option } = Select;
@@ -125,7 +125,7 @@ const BenchmarkPage = () => {
   const fetchModels = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:8000/api/models/');
+      const response = await api.get('/api/models/');
       // 只保留PyTorch格式的模型
       const ptModels = response.data.models.filter(model => model.format === 'pt');
       setModels(ptModels);
@@ -140,7 +140,7 @@ const BenchmarkPage = () => {
   const fetchDatasets = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://localhost:8000/api/benchmark/datasets');
+      const response = await api.get('/api/benchmark/datasets');
       setDatasets(response.data.datasets || []);
     } catch (error) {
       console.error('獲取數據集列表失敗:', error);
@@ -153,7 +153,7 @@ const BenchmarkPage = () => {
   const fetchTestTasks = async () => {
     setTasksLoading(true);
     try {
-      const response = await axios.get('http://localhost:8000/api/benchmark/tasks');
+      const response = await api.get('/api/benchmark/tasks');
 
       // 確保返回的是數組
       const tasks = response.data.tasks || [];
@@ -172,7 +172,7 @@ const BenchmarkPage = () => {
   // 獲取單個任務的詳細狀態
   const fetchTaskStatus = async (taskId) => {
     try {
-      const response = await axios.get(`http://localhost:8000/api/benchmark/status/${taskId}`);
+      const response = await api.get(`/api/benchmark/status/${taskId}`);
       const statusData = response.data;
       
       // 檢查狀態是否有變化
@@ -243,7 +243,7 @@ const BenchmarkPage = () => {
       }
       
       // 發送請求
-      const response = await axios.post('http://localhost:8000/api/benchmark/create', formData);
+      const response = await api.post('/api/benchmark/create', formData);
       
       // 設置當前任務並立即獲取其狀態
       const newTask = {
@@ -272,7 +272,7 @@ const BenchmarkPage = () => {
   // 中止測試任務
   const abortTask = async (taskId) => {
     try {
-      await axios.post(`http://localhost:8000/api/benchmark/abort/${taskId}`);
+      await api.post(`/api/benchmark/abort/${taskId}`);
       
       // 刷新任務列表和當前任務狀態
       fetchTestTasks();
@@ -291,7 +291,7 @@ const BenchmarkPage = () => {
   // 刪除測試任務
   const deleteTask = async (taskId) => {
     try {
-      await axios.delete(`http://localhost:8000/api/benchmark/task/${taskId}`);
+      await api.delete(`/api/benchmark/task/${taskId}`);
       
       // 刷新任務列表
       fetchTestTasks();
@@ -330,7 +330,7 @@ const BenchmarkPage = () => {
     formData.append('dataset_type', datasetType);
     
     try {
-      const response = await axios.post('http://localhost:8000/api/benchmark/datasets/upload', formData, {
+      const response = await api.post('/api/benchmark/datasets/upload', formData, {
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
             setUploadProgress(percentCompleted);
@@ -353,7 +353,7 @@ const BenchmarkPage = () => {
   // 刪除數據集
   const deleteDataset = async (datasetId) => {
     try {
-      await axios.delete(`http://localhost:8000/api/benchmark/datasets/${datasetId}`);
+      await api.delete(`/api/benchmark/datasets/${datasetId}`);
       message.success('數據集已刪除');
       fetchDatasets();
     } catch (error) {
@@ -368,7 +368,7 @@ const BenchmarkPage = () => {
   // 顯示任務錯誤詳情
   const showTaskErrorDetail = async (task) => {
     try {
-      const response = await axios.get(`http://localhost:8000/api/benchmark/task/${task.task_id}`);
+      const response = await api.get(`/api/benchmark/task/${task.task_id}`);
       const taskDetail = response.data;
       
       // 收集所有錯誤的組合
@@ -576,7 +576,7 @@ const BenchmarkPage = () => {
               <Button 
                 type="link" 
                 icon={<DownloadOutlined />}
-                onClick={() => window.open('http://localhost:8000/api/benchmark/download-results/' + record.task_id)}
+                onClick={() => window.open(API_BASE_URL + '/api/benchmark/download-results/' + record.task_id)}
               >
                 下載完整結果
               </Button>
@@ -652,7 +652,7 @@ const BenchmarkPage = () => {
   const fetchSystemState = async () => {
     setSystemStateLoading(true);
     try {
-      const response = await axios.get('http://localhost:8000/api/benchmark/system-state');
+      const response = await api.get('/api/benchmark/system-state');
       setSystemState(response.data);
     } catch (error) {
       console.error('獲取系統狀態失敗:', error);
@@ -665,7 +665,7 @@ const BenchmarkPage = () => {
   const checkActiveTask = async () => {
     try {
       // 獲取系統狀態
-      const stateResponse = await axios.get('http://localhost:8000/api/benchmark/system-state');
+      const stateResponse = await api.get('/api/benchmark/system-state');
       const systemState = stateResponse.data;
       
       // 如果有活動中的測試任務
@@ -696,7 +696,7 @@ const BenchmarkPage = () => {
     }));
     
     try {
-      const response = await axios.get(`http://localhost:8000/api/benchmark/combination/${taskId}/${combinationIndex}`);
+      const response = await api.get(`/api/benchmark/combination/${taskId}/${combinationIndex}`);
       
       // 更新組合詳細信息
       setCombinationDetails(prev => ({
@@ -959,7 +959,7 @@ const BenchmarkPage = () => {
           onFinish={handleSubmit}
           initialValues={{
             image_size: 640,
-            iterations: 100,
+            iterations: 10,  // 與後端 MAX_BENCHMARK_ITERATIONS 預設上限一致
             precisions: ['fp32'],
             model_type: 'object'  // 預設為物體檢測
           }}
@@ -1035,6 +1035,8 @@ const BenchmarkPage = () => {
             name="iterations"
             label="迭代次數"
             rules={[{ required: true, message: '請選擇迭代次數' }]}
+            tooltip="每個「精度 × 批次大小」組態重複量測的次數"
+            extra="後端有單組態上限（環境變數 MAX_BENCHMARK_ITERATIONS，預設 10 次）；超過上限時只會執行到上限次數，結果檔的 iterations 欄位記錄實際執行次數。"
           >
             <Select placeholder="選擇迭代次數">
               <Option value={10}>10</Option>

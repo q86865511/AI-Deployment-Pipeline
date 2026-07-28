@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, Descriptions, Button, Spin, message, Tag } from 'antd';
 import { SyncOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import api from '../api/client';
 
 const ConversionDetailPage = () => {
   const { id } = useParams();
@@ -31,7 +31,7 @@ const ConversionDetailPage = () => {
 
   const fetchJobDetails = async () => {
     try {
-      const response = await axios.get(`http://localhost:8000/api/conversion/${id}`);
+      const response = await api.get(`/api/conversion/${id}`);
       setJob(response.data);
     } catch (error) {
       console.error('獲取轉換任務詳情失敗:', error);
@@ -46,7 +46,7 @@ const ConversionDetailPage = () => {
     try {
       console.log('開始刷新模型庫...');
       // 發出請求告知服務器重新掃描模型目錄
-      const response = await axios.get('http://localhost:8000/api/models/refresh');
+      const response = await api.get('/api/models/refresh');
       console.log('模型庫刷新成功，返回：', response.data);
       message.success('已刷新模型庫，可以在模型列表中查看新模型');
     } catch (error) {
@@ -54,7 +54,7 @@ const ConversionDetailPage = () => {
       // 即使失敗也不顯示錯誤消息，因為這只是一個輔助功能
       // 但仍然嘗試強制刷新模型列表
       try {
-        await axios.get('http://localhost:8000/api/models/');
+        await api.get('/api/models/');
         console.log('雖然刷新失敗，但已獲取最新模型列表');
       } catch (e) {
         console.error('獲取模型列表也失敗:', e);
@@ -103,7 +103,7 @@ const ConversionDetailPage = () => {
           danger
           onClick={async () => {
             try {
-              await axios.delete(`http://localhost:8000/api/conversion/${id}`);
+              await api.delete(`/api/conversion/${id}`);
               message.success('刪除轉換任務成功');
               window.location.href = '/conversion';
             } catch (error) {

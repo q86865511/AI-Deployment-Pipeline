@@ -11,6 +11,7 @@ import json
 
 from app.models import ModelInfo, ModelList, ModelType, ModelFormat
 from app.services.model_service import ModelService
+from app.utils.path_safety import sanitize_filename
 
 router = APIRouter()
 model_service = ModelService()
@@ -84,9 +85,17 @@ async def upload_model(
             raise HTTPException(status_code=400, detail=f"無效的模型類型: {model_type}")
         
         # 檢查文件格式
-        if not model_file.filename.endswith(('.pt', '.pth')):
+        if not model_file.filename or not model_file.filename.endswith(('.pt', '.pth')):
             raise HTTPException(status_code=400, detail="只支持 .pt 或 .pth 格式的PyTorch模型文件")
-        
+
+        # 模型名稱會直接用來組模型庫目錄，必須先清洗；與清洗結果不符即視為非法名稱
+        # （空字串與清洗後為空的名稱也要擋，否則會以空名組出模型庫根目錄本身）
+        if not model_name or not sanitize_filename(model_name, default="") or model_name != sanitize_filename(model_name, default=""):
+            raise HTTPException(
+                status_code=400,
+                detail="模型名稱只允許英數字、底線、連字號與點，且不可包含路徑分隔符"
+            )
+
         # 檢查模型名稱是否已存在
         existing_model = model_service.get_model_by_name(model_name)
         if existing_model:

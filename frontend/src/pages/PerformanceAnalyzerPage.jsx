@@ -11,7 +11,7 @@ import {
   ReloadOutlined, CaretRightOutlined
 } from '@ant-design/icons';
 import { cleanDisplayName, getModelColor } from '../utils/performanceFormat';
-import axios from 'axios';
+import api from '../api/client';
 import ReactECharts from 'echarts-for-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -114,7 +114,7 @@ const ModelPerformanceAnalyzer = () => {
   // 載入可用的測試結果列表
   const loadAvailableResults = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/benchmark/tasks');
+      const response = await api.get('/api/benchmark/tasks');
       const tasks = response.data.tasks || [];
       const results = tasks
         .filter(task => task.status === 'completed')
@@ -275,7 +275,7 @@ const ModelPerformanceAnalyzer = () => {
     setLoading(true);
     
     try {
-      const response = await axios.get(`http://localhost:8000/api/benchmark/tasks/${taskId}/performance-analysis`);
+      const response = await api.get(`/api/benchmark/tasks/${taskId}/performance-analysis`);
       const data = response.data;
       setTestData(processTestData(data));
       message.success('已載入任務數據');
